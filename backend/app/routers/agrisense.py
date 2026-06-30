@@ -509,6 +509,16 @@ def get_liquidity_stress_test(farmer_id: int, db: Session = Depends(get_db)):
     )
     return result
 
+
+# ---------------------------------------------------------------------------
+# Peer Benchmarking
+# ---------------------------------------------------------------------------
+@router.get("/farmers/{farmer_id}/peer-benchmark")
+def get_peer_benchmark(farmer_id: int, db: Session = Depends(get_db)):
+    """Compare farmer against similar farms in the same region."""
+    from ..services.peer_benchmark import run_peer_benchmark
+    return run_peer_benchmark(farmer_id, db)
+
     financials = (
         db.query(FinancialRecord)
         .filter(FinancialRecord.farmer_id == farmer_id)

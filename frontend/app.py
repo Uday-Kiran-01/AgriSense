@@ -291,6 +291,40 @@ if page == "🏠 Dashboard":
             t = trends.get("net_income", "flat")
             st.metric("Net Income", f"{ni:,.0f} kr", delta=f"{trend_icons.get(t,'')}")
 
+        # ---- Peer Benchmark Card ----
+        st.markdown("---")
+        bench = fetch_json(f"/farmers/{FARMER_ID}/peer-benchmark")
+        if bench and not bench.get("error"):
+            st.markdown("### 📊 Peer Benchmark")
+            st.caption(f"Compared to {bench.get('peer_count', 0)} similar farms in "
+                       f"{bench.get('filters_applied', {}).get('region', 'N/A')} "
+                       f"({bench.get('filters_applied', {}).get('crop_family', 'N/A')}, "
+                       f"{bench.get('filters_applied', {}).get('farm_size_range', 'N/A')})")
+
+            overall = bench.get("overall_percentile", 50)
+            st.markdown(f"**Overall:** {bench.get('overall_interpretation', '')}")
+
+            benchmarks = bench.get("benchmarks", {})
+            # Show top 6 metrics as bar chart
+            bm_data = []
+            for key, b in list(benchmarks.items())[:6]:
+                bm_data.append({
+                    "Metric": b["label"],
+                    "Percentile": b["percentile"],
+                    "Interpretation": b["interpretation"],
+                })
+
+            if bm_data:
+                bm_df = pd.DataFrame(bm_data)
+                fig = px.bar(bm_df, x="Percentile", y="Metric", orientation="h",
+                             color="Percentile",
+                             color_continuous_scale=[(0, "#c62828"), (0.5, "#f57f17"), (1, "#2e7d32")],
+                             range_color=[0, 100])
+                fig.add_vline(x=50, line_dash="dash", line_color="#999")
+                fig.update_layout(height=250, margin=dict(l=0, r=0, t=0, b=0),
+                                  xaxis_title="Percentile (vs peers)")
+                st.plotly_chart(fig, use_container_width=True)
+
         # ---- Feature Importance + Risk Breakdown ----
         col1, col2 = st.columns([1, 1])
 
