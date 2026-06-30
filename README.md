@@ -130,18 +130,72 @@ Analysis     (Weather, Commodity, EU CAP)
 
 ### The Model Learns — We Don't Hardcode
 
-8 farmer profiles. The model discovers risk patterns from data.
+8 farmer profiles with probabilistic outcomes. The model sees features, not profiles.
 
-| Profile | % | ML Must Learn |
-|---|---|---|
-| Established | 30% | Good repayment -> low risk |
-| Conservative | 18% | No loans + stable != risky |
-| Expansion | 15% | High leverage + weather sensitive |
-| Young Farmer | 12% | Thin file = higher uncertainty |
-| Diversified | 10% | Multiple crops -> stable |
-| Struggling | 8% | Poor repayment -> high risk |
-| Organic Premium | 5% | Premium prices offset costs |
-| Tenant | 2% | No land = different risk |
+| Profile | % | Default Rate | What ML Learns |
+|---|---|---|---|
+| Established | 30% | ~5% | Strong repayment history + large farm + owned land → repayment likely |
+| Conservative | 18% | ~4% | Low debt + stable income + insurance → low default risk |
+| Expansion | 15% | ~18% | High leverage interacts with weather and commodity prices → mixed outcomes |
+| Young Farmer | 12% | ~12% | Limited history interacts with farm size, cash flow, and UC score → variable risk |
+| Diversified | 10% | ~7% | Multiple crops + premium prices → revenue stability → lower risk |
+| Struggling | 8% | ~45% | Declining revenue + missed payments + low UC → elevated risk |
+| Organic Premium | 5% | ~6% | Higher revenue/ha offsets higher costs → moderate risk |
+| Tenant | 2% | ~15% | No land collateral + leased + variable costs → distinct risk pattern |
+
+> The model never receives the profile label or the default probability. It only sees financial, operational, and environmental features. It discovers risk patterns from the data — including how "no credit history" interacts differently with strong vs. weak financials.
+
+### Target Variable
+
+The Random Forest predicts:
+- **Credit Risk** (binary classifier): Will this farmer default? (0 = repays, 1 = defaults/high risk)
+- **Repayment Probability** (regressor): Continuous 0–1 estimate
+- **Debt Capacity** (regressor): Maximum additional loan amount (SEK)
+
+Labels are generated probabilistically: a farmer from the "Struggling" profile has a ~45% chance of being labeled as default, not 100%. This creates realistic class overlap — some struggling farmers do repay, and some established farmers don't. The model must learn from patterns, not memorize profiles.
+
+---
+
+## 📋 Model Card
+
+### Purpose
+Predict repayment risk and debt capacity for Swedish agricultural businesses to **support — not replace — human lending decisions.**
+
+### Training Data
+2,500 synthetic Swedish agricultural businesses representing 8 portfolio profiles. All data is synthetic (no real PII). Dataset v1.0.
+
+### Features (15)
+| Category | Features |
+|---|---|
+| Financial | debt_to_income, dscr, operating_margin, cash_flow_margin, working_capital, interest_coverage |
+| Leverage | loan_to_value, asset_coverage, debt_to_equity, current_ratio |
+| Credit | repayment_ratio |
+| Environmental | drought_index, price_change_abs |
+| Operational | farm_size_ha, has_insurance |
+
+### Target
+- **Credit Risk**: Binary (0 = repays, 1 = defaults). Labels generated probabilistically per profile.
+- **Repayment Probability**: Continuous 0–1.
+- **Debt Capacity**: SEK, maximum additional loan amount.
+
+### Model
+Random Forest (scikit-learn). 3 separate models (classifier + 2 regressors). Hyperparameters tuned via GridSearchCV (n_estimators, max_depth, min_samples_split).
+
+### Validation
+5-fold StratifiedKFold cross-validation. Metrics: Precision, Recall, F1, ROC-AUC, Confusion Matrix. Optimized for recall (False Negatives = missed defaults = expensive).
+
+### Limitations
+- Synthetic data — patterns may differ from real-world agricultural lending
+- Simplified assumptions — no macroeconomic shocks, no policy changes
+- Swedish context only — not validated for other regions or regulatory regimes
+- Not suitable for production lending decisions without real-data validation
+
+### Ethical Considerations
+- All recommendations are **advisory** — final decisions remain with human loan officers
+- No demographic features (age, gender, ethnicity) used as model inputs
+- Synthetic dataset designed for representative coverage across farm sizes, regions, and credit profiles
+- Model confidence is reported alongside predictions — low-confidence predictions are flagged for manual review
+- Decision Readiness layer identifies insufficient evidence and recommends human intervention
 
 ---
 

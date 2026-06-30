@@ -452,7 +452,8 @@ def seed_bulk_farmers(db: Session, n_farmers: int = 2500) -> int:
 FARMER_PROFILES = {
     "young_farmer": {
         "label": "Young Farmer (New Entrant)",
-        "pct": 0.12,  # 12% of portfolio
+        "pct": 0.12,
+        "default_probability": 0.12,  # Probabilistic — not every young farmer defaults
         "years_farming": (2, 8),
         "farm_ha": (10, 40),
         "land_ownership": "leased",
@@ -466,7 +467,8 @@ FARMER_PROFILES = {
     },
     "established": {
         "label": "Established Grain Farmer",
-        "pct": 0.30,  # 30% — largest segment
+        "pct": 0.30,
+        "default_probability": 0.05,
         "years_farming": (12, 35),
         "farm_ha": (40, 150),
         "land_ownership": "owned",
@@ -481,6 +483,7 @@ FARMER_PROFILES = {
     "expansion": {
         "label": "Aggressive Expansion",
         "pct": 0.15,
+        "default_probability": 0.18,
         "years_farming": (8, 20),
         "farm_ha": (80, 300),
         "land_ownership": "mixed",
@@ -495,6 +498,7 @@ FARMER_PROFILES = {
     "conservative": {
         "label": "Conservative Smallholder",
         "pct": 0.18,
+        "default_probability": 0.04,
         "years_farming": (10, 30),
         "farm_ha": (15, 50),
         "land_ownership": "owned",
@@ -509,6 +513,7 @@ FARMER_PROFILES = {
     "diversified": {
         "label": "Diversified Mixed Farm",
         "pct": 0.10,
+        "default_probability": 0.07,
         "years_farming": (5, 25),
         "farm_ha": (30, 100),
         "land_ownership": "mixed",
@@ -523,6 +528,7 @@ FARMER_PROFILES = {
     "struggling": {
         "label": "Weather-Hit / Struggling",
         "pct": 0.08,
+        "default_probability": 0.45,
         "years_farming": (5, 30),
         "farm_ha": (20, 80),
         "land_ownership": "mixed",
@@ -537,6 +543,7 @@ FARMER_PROFILES = {
     "organic_premium": {
         "label": "Organic / Premium Producer",
         "pct": 0.05,
+        "default_probability": 0.06,
         "years_farming": (5, 20),
         "farm_ha": (15, 60),
         "land_ownership": "owned",
@@ -551,6 +558,7 @@ FARMER_PROFILES = {
     "tenant_farmer": {
         "label": "Tenant / Leased-Land Farmer",
         "pct": 0.02,
+        "default_probability": 0.15,
         "years_farming": (3, 15),
         "farm_ha": (20, 80),
         "land_ownership": "leased",
