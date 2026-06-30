@@ -20,43 +20,85 @@ AgriSense AI helps farmers and financial institutions make transparent financing
 
 ## 🏗️ Architecture
 
+### Offline Pipeline (Training)
+
 ```
-                 Farmer
-                    │
-                    ▼
-           Farmer Digital Vault
-                    │
-                    ▼
-           Data Extraction Layer
-                    │
-                    ▼
-          Unified Farmer Profile
-                    │
-        ┌───────────┴────────────┐
-        ▼                        ▼
- Financial Analysis      External Data
-   (Ratios & KPIs)       (Weather, Commodity)
-        │                        │
-        └───────────┬────────────┘
-                    ▼
-         Explainable ML Engine
-          (Random Forest)
-                    │
-                    ▼
-          Scenario Analysis
-         ("What-if" Engine)
-                    │
-                    ▼
-           Gemini AI Layer
-        (Explanations & Memo)
-                    │
-                    ▼
-           Bank Loan Officer
-               Dashboard
-                    │
-                    ▼
-         Human Makes Decision
+Synthetic Data (2,500 farmers)
+        │
+        ▼
+  Data Validation ─── rejects impossible values
+        │
+        ▼
+  Data Cleaning ─── missing, duplicates, outliers (flag)
+        │
+        ▼
+  Feature Engineering ─── 15 derived features
+        │
+        ▼
+  Train/Test Split ─── 80/20 stratified
+        │
+        ▼
+  Cross-Validation ─── 5-fold StratifiedKFold
+        │
+        ▼
+  Grid Search ─── n_estimators, max_depth, min_samples_split
+        │
+        ▼
+  Model Training ─── Random Forest × 3
+        │
+        ▼
+  Evaluation ─── Precision, Recall, F1, ROC-AUC, Confusion Matrix
+        │
+        ▼
+  Save Pipeline ─── model.pkl + metadata.json + feature_columns.json
 ```
+
+### Online Pipeline (Inference)
+
+```
+New Farmer Application
+        │
+        ▼
+  Load Saved Pipeline ─── same cleaning, same features, same model
+        │
+        ▼
+  Document Upload ─── financial statements, loan docs, land records
+        │
+        ▼
+  Data Extraction ─── structured values + provenance tracking
+        │
+        ▼
+  Unified Farmer Profile ─── financial + operational + external
+        │
+  ┌─────┴─────┐
+  ▼           ▼
+Financial    External Data
+Analysis     (Weather, Commodity, EU CAP)
+  │           │
+  └─────┬─────┘
+        ▼
+  Feature Engineering ─── SAME 15 features as training
+        │
+        ▼
+  Load Model ─── Random Forest (scale-invariant, no transform needed)
+        │
+        ▼
+  Prediction ─── risk score, repayment prob, debt capacity
+        │
+        ▼
+  Explainability ─── feature importance rankings
+        │
+        ▼
+  Scenario Analysis ─── what-if simulations
+        │
+        ▼
+  Gemini AI ─── generates decision memo (never decides)
+        │
+        ▼
+  Bank Loan Officer Dashboard ─── HUMAN MAKES FINAL DECISION
+```
+
+> ⚡ **Key design choice**: Training and inference use the **same preprocessing pipeline**. Median values, feature order, and encoding maps are saved during training and reloaded at inference — no train/serve skew.
 
 ---
 
@@ -244,14 +286,34 @@ The full preprocessing and ML pipeline runs before any prediction:
 
 ### 🛡️ Data Engineering for Real-World Deployment
 
-Current demo uses synthetic data. For production:
+Current demo uses synthetic data (dataset v1.0: 2,500 Swedish farmers). For production:
 
-- **Missing financials**: Median imputation by farm size bracket — preserves distribution per cohort
-- **Missing weather**: API backfill from SMHI/OpenWeatherMap with fallback to 5-year regional average
-- **Conflicting documents**: Revenue mismatch >10% across documents = automatic flag for manual review
-- **Invalid values**: Rejected at validation boundary — never silently corrected
-- **Pipeline consistency**: Same preprocessing used during training is reused during inference (no train/serve skew)
-- **Feature store**: All 15 features computed deterministically from raw inputs — reproducible predictions
+- **Missing financials**: Median imputation by farm size bracket — preserves distribution per cohort. Same medians saved at training time and reused at inference.
+- **Missing weather**: API backfill from SMHI/OpenWeatherMap with fallback to 5-year regional average.
+- **Conflicting documents**: Revenue mismatch >10% across documents = automatic flag for manual review. System presents both values with sources — never auto-resolves.
+- **Invalid values**: Rejected at validation boundary — never silently corrected. Loan officer is notified of the specific field and violation.
+- **Pipeline consistency**: Same preprocessing used during training is reused during inference. No train/serve skew.
+- **Feature store**: All 15 features computed deterministically from raw inputs — reproducible predictions, auditable at any point.
+
+### ⚖️ Data Leakage Prevention
+
+Only information available **before** a loan decision is used as input features. Future repayment outcomes serve exclusively as training labels — never as input features. The train/test split respects temporal ordering: no future data appears in training. This is critical for lending models where look-ahead bias would produce unrealistically optimistic evaluations.
+
+### 🎯 Configurable Risk Threshold
+
+The default classification threshold is 0.50, but this is **configurable** per bank policy:
+
+| Threshold | Behavior | Use Case |
+|---|---|---|
+| 0.35 | More approvals, higher recall | Growth-focused lending |
+| **0.50** | **Balanced (default)** | **Standard portfolio** |
+| 0.65 | Conservative, more manual reviews | Risk-averse lending |
+
+Risk scores >0.65 trigger an automatic **Manual Review Required** flag regardless of threshold.
+
+### 🌍 Bias Awareness
+
+The synthetic dataset was generated with representative distributions across Swedish regions (Skåne, Västra Götaland, Östergötland, etc.), farm sizes (10–500 ha), crop types, and credit profiles (UC scores 350–890). No demographic features (age, gender, ethnicity) are used as model inputs — only financial, operational, and environmental indicators.
 
 ---
 

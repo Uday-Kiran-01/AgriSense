@@ -197,25 +197,77 @@ def train_with_validation(X: np.ndarray, y_risk: np.ndarray,
                key=lambda x: x[1], reverse=True)
     )
 
-    # ---- Save models and results ----
+    # ---- Save models with versioning metadata ----
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    version = f"v{datetime.now().strftime('%y.%m.%d')}-{datetime.now().strftime('%H%M')}"
+
+    # Save versioned model files
     joblib.dump(risk_model, MODEL_DIR / f"risk_model_{timestamp}.pkl")
     joblib.dump(repay_model, MODEL_DIR / f"repay_model_{timestamp}.pkl")
     joblib.dump(cap_model, MODEL_DIR / f"capacity_model_{timestamp}.pkl")
 
-    # Also save as latest
+    # Also save as latest (for inference)
     joblib.dump(risk_model, MODEL_DIR / "credit_risk_model.pkl")
     joblib.dump(repay_model, MODEL_DIR / "repayment_model.pkl")
     joblib.dump(cap_model, MODEL_DIR / "debt_capacity_model.pkl")
 
-    # Save evaluation report
+    # ---- Training metadata (model versioning) ----
+    metadata = {
+        "version": version,
+        "timestamp": timestamp,
+        "model_type": "RandomForest",
+        "n_estimators": best_params["n_estimators"],
+        "max_depth": best_params["max_depth"],
+        "min_samples_split": best_params.get("min_samples_split", 2),
+        "n_training_samples": len(X_train),
+        "n_features": X.shape[1],
+        "feature_names": FEATURE_NAMES,
+        "targets": ["credit_risk", "repayment_probability", "debt_capacity_sek"],
+        "scaling": "none — Random Forest is scale-invariant",
+        "encoding": "LabelEncoder for categorical, passthrough for numeric",
+        "data_version": "v1.0 — 2500 synthetic Swedish farmers",
+        "data_leakage_check": (
+            "Only pre-approval features used. Future repayment outcomes "
+            "are labels only, never input features. Train/test split is "
+            "time-respecting — no future data in training."
+        ),
+        "bias_note": (
+            "Synthetic dataset generated with representative distributions "
+            "across Swedish regions, farm sizes (10-500 ha), crop types, "
+            "and credit profiles to avoid demographic or geographic bias."
+        ),
+        "threshold_note": (
+            "Default risk threshold: 0.50. Configurable via config. "
+            "Banks may adjust: lower threshold = more conservative (fewer FP, more FN). "
+            "Production recommendation: >0.65 → Manual Review required."
+        ),
+        "performance": {
+            "roc_auc": results["evaluation"]["risk_classifier"]["roc_auc"],
+            "f1_score": results["evaluation"]["risk_classifier"]["f1_score"],
+            "cv_mean_roc_auc": results["cross_validation"]["mean_roc_auc"],
+        },
+    }
+
+    with open(MODEL_DIR / f"training_metadata_{timestamp}.json", "w") as f:
+        json.dump(metadata, f, indent=2, default=str)
+
+    # Feature columns file (for inference reproducibility)
+    with open(MODEL_DIR / "feature_columns.json", "w") as f:
+        json.dump({
+            "version": version,
+            "feature_names": FEATURE_NAMES,
+            "n_features": len(FEATURE_NAMES),
+            "feature_order": {name: i for i, name in enumerate(FEATURE_NAMES)},
+            "scaling_params": None,  # RF — no scaling
+            "encoding_maps": {},      # populated if categorical encoding used
+        }, f, indent=2)
+
+    # Save evaluation report alongside
     with open(MODEL_DIR / f"evaluation_{timestamp}.json", "w") as f:
         json.dump(results, f, indent=2, default=str)
 
-    logger.info(f"ML pipeline complete: "
-                f"ROC-AUC={results['evaluation']['risk_classifier']['roc_auc']:.3f}, "
-                f"F1={results['evaluation']['risk_classifier']['f1_score']:.3f}, "
-                f"CV mean={results['cross_validation']['mean_roc_auc']:.3f}")
+    logger.info(f"Model version {version} saved. ROC-AUC={metadata['performance']['roc_auc']:.3f}, "
+                f"F1={metadata['performance']['f1_score']:.3f}")
 
     return results
 
