@@ -41,6 +41,18 @@ class Settings:
         "https://api.tech.ec.europa.eu/agrifood",
     )
 
+    # FAOSTAT (UN FAO) — crop production, yield, producer prices (no API key required)
+    FAOSTAT_BASE_URL: str = os.getenv(
+        "FAOSTAT_BASE_URL",
+        "https://fenixservices.fao.org/faostat/api/v2/en",
+    )
+
+    # Eurostat — EU agricultural price indices (no API key required)
+    EUROSTAT_BASE_URL: str = os.getenv(
+        "EUROSTAT_BASE_URL",
+        "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data",
+    )
+
     # App
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
     MODEL_PATH: str = os.getenv("MODEL_PATH", str(BASE_DIR / "data" / "models"))
