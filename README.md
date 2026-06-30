@@ -115,6 +115,36 @@ Analysis     (Weather, Commodity, EU CAP)
 
 ---
 
+## 🧱 Architecture Principles
+
+### Separation of Concerns
+
+| Layer | Responsibility | Example |
+|---|---|---|
+| **Validation** | Is the input usable? | Revenue >= 0. Interest rate 0-25%. |
+| **Financial Analysis** | Compute objective metrics | DSCR = EBITDA / Debt Service. |
+| **Machine Learning** | Learn patterns from data | Random Forest on 2,500 farmers. |
+| **Gemini AI** | Explain in human language | "DSCR of 1.32x means..." |
+
+> Business rules validate. Financial formulas calculate. ML predicts. Gemini explains.
+
+### The Model Learns — We Don't Hardcode
+
+8 farmer profiles. The model discovers risk patterns from data.
+
+| Profile | % | ML Must Learn |
+|---|---|---|
+| Established | 30% | Good repayment -> low risk |
+| Conservative | 18% | No loans + stable != risky |
+| Expansion | 15% | High leverage + weather sensitive |
+| Young Farmer | 12% | Thin file = higher uncertainty |
+| Diversified | 10% | Multiple crops -> stable |
+| Struggling | 8% | Poor repayment -> high risk |
+| Organic Premium | 5% | Premium prices offset costs |
+| Tenant | 2% | No land = different risk |
+
+---
+
 ## 🧱 Tech Stack
 
 | Layer | Technology |

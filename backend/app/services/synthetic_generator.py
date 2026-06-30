@@ -1,20 +1,37 @@
 """
-Synthetic Swedish Farmer Data Generator
-Generates 2500+ realistic synthetic farmers for ML training.
+Synthetic Agricultural Portfolio Generator
+Generates 2500+ realistic Swedish farming businesses for ML training.
+
+Creates diverse PROFILES — not random numbers. Each profile represents
+a distinct type of agricultural business with realistic financial,
+operational, and environmental characteristics.
+
+Profiles (the model learns — we don't hardcode rules):
+  1. Young Farmer — new entrant, small farm, no credit history
+  2. Established — experienced, multiple loans, strong repayment
+  3. Expansion — large farm, high debt, weather-sensitive
+  4. Conservative — low debt, moderate size, stable income
+  5. Diversified — mixed crops, multiple income streams
+  6. Struggling — weather-hit, declining revenue, repayment issues
+  7. Organic — premium prices, higher costs, niche market
+  8. Tenant — leased land, lower assets, variable costs
 
 GDPR: ALL DATA IS SYNTHETIC. No real PII.
-Uses statistical distributions based on Swedish agricultural statistics
-(Jordbruksverket, SCB, Lantbrukarnas Riksförbund).
+
+Design principle:
+  Validation layer → checks if data is usable
+  Financial formulas → compute objective metrics (DSCR, DTI, LTV)
+  Machine learning → LEARNS risk patterns from data
+  Gemini → explains predictions in human language
 """
 import json
-import random
 import numpy as np
-from datetime import datetime, date, timedelta
+from datetime import datetime
 from sqlalchemy.orm import Session
 
 from ..models import (
     Farmer, ExistingLoan, FinancialRecord,
-    OperationalData, ExternalData, Prediction,
+    OperationalData,
 )
 from ..logger import get_logger
 
@@ -424,3 +441,126 @@ def seed_bulk_farmers(db: Session, n_farmers: int = 2500) -> int:
 
     logger.info(f"Bulk seed complete: {n_farmers} farmers, {total_rows} total rows")
     return total_rows
+
+
+# ===========================================================================
+# Farmer Profiles — Realistic Agricultural Business Archetypes
+# ===========================================================================
+# Each profile encodes a distinct risk pattern that the ML model must LEARN.
+# We do NOT hardcode "if no loans → medium confidence". The model discovers it.
+
+FARMER_PROFILES = {
+    "young_farmer": {
+        "label": "Young Farmer (New Entrant)",
+        "pct": 0.12,  # 12% of portfolio
+        "years_farming": (2, 8),
+        "farm_ha": (10, 40),
+        "land_ownership": "leased",
+        "uc_score": (400, 620),
+        "n_loans": (0, 1),
+        "repayment_quality": (0.70, 0.90),
+        "revenue_per_ha": (0.85, 1.05),
+        "has_insurance": 0.55,
+        "has_tractor": 0.50,
+        "note": "Thin/none credit file. Small farm. Model must learn from financials.",
+    },
+    "established": {
+        "label": "Established Grain Farmer",
+        "pct": 0.30,  # 30% — largest segment
+        "years_farming": (12, 35),
+        "farm_ha": (40, 150),
+        "land_ownership": "owned",
+        "uc_score": (620, 800),
+        "n_loans": (2, 4),
+        "repayment_quality": (0.90, 1.0),
+        "revenue_per_ha": (0.95, 1.20),
+        "has_insurance": 0.90,
+        "has_tractor": 0.95,
+        "note": "Core portfolio. Strong history. Model should find these low-risk.",
+    },
+    "expansion": {
+        "label": "Aggressive Expansion",
+        "pct": 0.15,
+        "years_farming": (8, 20),
+        "farm_ha": (80, 300),
+        "land_ownership": "mixed",
+        "uc_score": (550, 720),
+        "n_loans": (3, 6),
+        "repayment_quality": (0.75, 0.95),
+        "revenue_per_ha": (0.80, 1.10),
+        "has_insurance": 0.75,
+        "has_tractor": 0.95,
+        "note": "High debt, large scale. Weather-sensitive. Mixed outcomes.",
+    },
+    "conservative": {
+        "label": "Conservative Smallholder",
+        "pct": 0.18,
+        "years_farming": (10, 30),
+        "farm_ha": (15, 50),
+        "land_ownership": "owned",
+        "uc_score": (650, 850),
+        "n_loans": (0, 2),
+        "repayment_quality": (0.92, 1.0),
+        "revenue_per_ha": (0.90, 1.10),
+        "has_insurance": 0.80,
+        "has_tractor": 0.70,
+        "note": "Low debt, stable. Some have no loans. Model learns: low debt + stable = low risk.",
+    },
+    "diversified": {
+        "label": "Diversified Mixed Farm",
+        "pct": 0.10,
+        "years_farming": (5, 25),
+        "farm_ha": (30, 100),
+        "land_ownership": "mixed",
+        "uc_score": (600, 780),
+        "n_loans": (1, 3),
+        "repayment_quality": (0.85, 0.98),
+        "revenue_per_ha": (1.0, 1.35),
+        "has_insurance": 0.85,
+        "has_tractor": 0.85,
+        "note": "Multiple income streams. Higher revenue/ha. Premium niche possible.",
+    },
+    "struggling": {
+        "label": "Weather-Hit / Struggling",
+        "pct": 0.08,
+        "years_farming": (5, 30),
+        "farm_ha": (20, 80),
+        "land_ownership": "mixed",
+        "uc_score": (380, 580),
+        "n_loans": (1, 4),
+        "repayment_quality": (0.50, 0.78),
+        "revenue_per_ha": (0.55, 0.85),
+        "has_insurance": 0.40,
+        "has_tractor": 0.65,
+        "note": "Declining revenue, missed payments. Model must learn: this pattern = high risk.",
+    },
+    "organic_premium": {
+        "label": "Organic / Premium Producer",
+        "pct": 0.05,
+        "years_farming": (5, 20),
+        "farm_ha": (15, 60),
+        "land_ownership": "owned",
+        "uc_score": (600, 780),
+        "n_loans": (1, 2),
+        "repayment_quality": (0.88, 1.0),
+        "revenue_per_ha": (1.20, 1.60),
+        "has_insurance": 0.70,
+        "has_tractor": 0.60,
+        "note": "Higher revenue/ha but higher costs. Niche premium. Small but profitable.",
+    },
+    "tenant_farmer": {
+        "label": "Tenant / Leased-Land Farmer",
+        "pct": 0.02,
+        "years_farming": (3, 15),
+        "farm_ha": (20, 80),
+        "land_ownership": "leased",
+        "uc_score": (450, 650),
+        "n_loans": (0, 2),
+        "repayment_quality": (0.70, 0.90),
+        "revenue_per_ha": (0.80, 1.05),
+        "has_insurance": 0.50,
+        "has_tractor": 0.55,
+        "note": "No land collateral. Lower assets. Model must learn: leased = different risk.",
+    },
+}
+
