@@ -409,6 +409,59 @@ def get_investment_presets():
     return INVESTMENT_PRESETS
 
 
+# ---------------------------------------------------------------------------
+# Decision Readiness
+# ---------------------------------------------------------------------------
+@router.get("/farmers/{farmer_id}/decision-readiness")
+def get_decision_readiness(farmer_id: int, db: Session = Depends(get_db)):
+    """Assess whether enough evidence exists for a lending decision."""
+    from ..services.decision_readiness import run_full_readiness_assessment
+
+    farmer = db.get(Farmer, farmer_id)
+    if not farmer:
+        raise HTTPException(404, "Farmer not found")
+
+    # Gather documents (metadata from seed)
+    documents = [
+        {"document_type": "financial_statement"},
+        {"document_type": "bank_statement"},
+        {"document_type": "loan_doc"},
+        {"document_type": "land_record"},
+        {"document_type": "farm_doc"},
+        {"document_type": "insurance"},
+    ]
+
+    financials = (
+        db.query(FinancialRecord)
+        .filter(FinancialRecord.farmer_id == farmer_id)
+        .order_by(FinancialRecord.year.desc())
+        .all()
+    )
+    ops = (
+        db.query(OperationalData)
+        .filter(OperationalData.farmer_id == farmer_id)
+        .first()
+    )
+    latest_pred = (
+        db.query(Prediction)
+        .filter(Prediction.farmer_id == farmer_id)
+        .order_by(Prediction.created_at.desc())
+        .first()
+    )
+
+    report = run_full_readiness_assessment(
+        farmer_id,
+        documents,
+        [r.__dict__ for r in financials],
+        ops.__dict__ if ops else None,
+        n_conflicts=0,
+        n_outliers=0,
+        n_validation_errors=0,
+        model_confidence=latest_pred.model_confidence if latest_pred else None,
+    )
+    return report
+
+
 @router.get("/farmers/{farmer_id}/scenarios", response_model=list[ScenarioResultRead])
 def get_scenarios(farmer_id: int, db: Session = Depends(get_db)):
     return (

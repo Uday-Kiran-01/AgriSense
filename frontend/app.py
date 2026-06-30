@@ -225,6 +225,39 @@ if page == "🏠 Dashboard":
         }
         st.info(summaries.get(risk_level, summaries["medium"]))
 
+        # ---- Decision Readiness Scores ----
+        readiness = fetch_json(f"/farmers/{FARMER_ID}/decision-readiness")
+        if readiness:
+            st.markdown("---")
+            st.markdown("### 🛡️ Decision Readiness")
+
+            summ = readiness.get("summary", {})
+            level = readiness.get("decision_readiness", {}).get("level", "unknown")
+
+            colors_level = {"ready": "#2e7d32", "reduced_confidence": "#f57f17", "insufficient": "#c62828"}
+            lc = colors_level.get(level, "#666")
+
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Decision Readiness", f"{summ.get('decision_readiness', 'N/A')}")
+            with col2:
+                st.metric("Evidence Quality", f"{summ.get('evidence_quality', 'N/A')}")
+            with col3:
+                st.metric("Data Freshness", f"{summ.get('freshness', 'N/A')}")
+            with col4:
+                st.metric("Completeness", f"{summ.get('completeness', 'N/A')}")
+
+            # Readiness message
+            msg = readiness.get("decision_readiness", {}).get("message", "")
+            rec = readiness.get("decision_readiness", {}).get("recommendation", "")
+            st.markdown(f"""
+            <div style="border-left:4px solid {lc};padding:0.5rem 0.75rem;background:{lc}10;border-radius:4px;margin:0.5rem 0;">
+            <strong style="color:{lc};">{level.replace('_',' ').title()}</strong><br>
+            <small>{msg}</small><br>
+            <small><em>{rec}</em></small>
+            </div>
+            """, unsafe_allow_html=True)
+
         st.markdown("---")
 
         # ---- Key Metrics + Timeline (#4) ----
