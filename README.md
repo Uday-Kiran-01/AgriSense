@@ -1,0 +1,14 @@
+---
+title: Agri Sense
+emoji: 👀
+colorFrom: gray
+colorTo: pink
+sdk: gradio
+sdk_version: 6.19.0
+python_version: '3.13'
+app_file: app.py
+pinned: false
+short_description: Explainable AI for Agricultural Financing
+---
+
+Check out the configuration reference at https://huggingface.co/docs/hub/spaces-config-reference
