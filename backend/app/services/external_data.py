@@ -23,12 +23,43 @@ logger = get_logger(__name__)
 # SMHI — Swedish weather (free, no API key)
 # ---------------------------------------------------------------------------
 
-# Skane region stations: Lund, Helsingborg, Kristianstad, Trelleborg
-SMHI_SKANE_STATIONS = {
-    "Lund": "53430",
-    "Helsingborg": "62040",
-    "Kristianstad": "64030",
-    "Trelleborg": "53230",
+# Swedish agricultural regions mapped to nearest active SMHI stations
+# Station keys discovered from: https://opendata-download-metobs.smhi.se/api/version/latest/parameter/5.json
+SMHI_REGION_STATIONS = {
+    # Skåne län (southernmost — highest agricultural density)
+    "Skane": "53430",           # Lund
+    "Skane_Lund": "53430",
+    "Skane_Kristianstad": "64030",
+    "Skane_Helsingborg": "62040",
+    "Skane_Trelleborg": "53230",
+    "Skane_Malmo": "52350",     # Malmö (fallback)
+    # Västra Götaland (second largest agricultural region)
+    "Vastra Gotaland": "81570",  # Håvelund (active)
+    "Vastra_Gotaland": "81570",
+    # Östergötland
+    "Ostergotland": "85230",     # Linköping area
+    "Ostergotland": "85230",
+    # Jönköping
+    "Jonkoping": "74460",        # Jönköping area
+    "Jonkoping": "74460",
+    # Halland
+    "Halland": "72180",          # Falkenberg area
+    # Kalmar
+    "Kalmar": "66410",           # Kalmar area
+    # Stockholm / Uppsala / Södermanland (Mälardalen)
+    "Stockholm": "98230",        # Stockholm
+    "Uppsala": "97530",          # Uppsala
+    "Sodermanland": "95700",     # Nyköping area
+    # Värmland
+    "Varmland": "93220",         # Karlstad area
+    # Dalarna / Gävleborg
+    "Dalarna": "105320",         # Falun area
+    "Gavleborg": "107220",       # Gävle area
+    # Norrbotten / Västerbotten (northern — limited agriculture)
+    "Norrbotten": "3340",        # Luleå area
+    "Vasterbotten": "14920",     # Umeå area
+    # Default fallback — Lund (best data availability)
+    "_default": "53430",
 }
 
 # SMHI parameter IDs
@@ -91,12 +122,17 @@ async def _fetch_smhi_stationset(parameter: int) -> list[dict] | None:
 async def fetch_weather_data(region: str = "Skane") -> dict:
     """
     Fetch weather data from SMHI Open Data (free, no API key).
+    Selects the appropriate SMHI station based on the farmer's region.
     Falls back to mock Swedish data if SMHI is unreachable.
 
     Returns dict with: temperature_celsius, rainfall_mm, drought_index,
-                       wind_speed_ms, humidity_pct, snow_depth_m, source, is_mock
+                       wind_speed_ms, humidity_pct, snow_depth_m, region, source, is_mock
     """
-    station_key = SMHI_SKANE_STATIONS.get("Lund", "53430")
+    # Resolve region to nearest SMHI station
+    station_key = SMHI_REGION_STATIONS.get(
+        region,
+        SMHI_REGION_STATIONS.get(region.replace(" ", "_"), "53430"),
+    )
 
     # Try SMHI live data for temperature and precipitation
     temp_data = await _fetch_smhi_station_data(station_key, SMHI_PARAM["temperature"])
@@ -125,15 +161,18 @@ async def fetch_weather_data(region: str = "Skane") -> dict:
             "flood_risk": "high" if rainfall > 50 else "medium" if rainfall > 20 else "low",
             "wind_speed_ms": round(wind, 1),
             "humidity_pct": round(humidity, 1),
-            "snow_depth_m": 0,  # SMHI snow depth available only in winter
+            "snow_depth_m": 0,
+            "region": region,
+            "smhi_station": station_key,
             "source": "smhi_live",
             "is_mock": False,
         }
 
-    # Mock fallback — Swedish climate (Skane region)
-    rainfall = round(random.uniform(500, 750), 1)
-    temp = round(random.uniform(-2, 22), 1)
-    logger.info(f"SMHI unavailable — using mock data ({temp}C, {rainfall}mm)")
+    # Mock fallback — Swedish climate (varies by region: north colder/drier, south warmer/wetter)
+    is_north = region.lower() in ("norrbotten", "vasterbotten", "dalarna", "gavleborg", "jamtland")
+    rainfall = round(random.uniform(350, 550) if is_north else random.uniform(500, 750), 1)
+    temp = round(random.uniform(-10, 12) if is_north else random.uniform(-2, 22), 1)
+    logger.info(f"SMHI unavailable for {region} — using mock data ({temp}C, {rainfall}mm)")
     return {
         "temperature_celsius": temp,
         "rainfall_mm": rainfall,
@@ -141,7 +180,9 @@ async def fetch_weather_data(region: str = "Skane") -> dict:
         "flood_risk": "low",
         "wind_speed_ms": round(random.uniform(2, 8), 1),
         "humidity_pct": round(random.uniform(60, 90), 1),
-        "snow_depth_m": 0,
+        "snow_depth_m": round(random.uniform(0.1, 0.5), 1) if is_north else 0,
+        "region": region,
+        "smhi_station": station_key,
         "source": "mock_smhi",
         "is_mock": True,
     }
