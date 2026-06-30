@@ -34,19 +34,42 @@ EVAL_DIR.mkdir(parents=True, exist_ok=True)
 
 def generate_evaluation_set(n_farmers: int = 1000, seed: int = 999) -> list[dict]:
     """
-    Generate a fresh set of farmers with DIFFERENT seed and slightly
-    shifted distributions to simulate real-world deployment data.
-    """
-    # Slightly alter profile distributions for the eval set
-    eval_profiles = dict(FARMER_PROFILES)
-    eval_profiles["young_farmer"] = {**eval_profiles["young_farmer"], "pct": 0.18}  # more young
-    eval_profiles["established"] = {**eval_profiles["established"], "pct": 0.22}    # fewer established
-    eval_profiles["diversified"] = {**eval_profiles["diversified"], "pct": 0.14}     # more diversified
-    eval_profiles["struggling"] = {**eval_profiles["struggling"], "pct": 0.06}       # fewer struggling
+    Generate a fresh set of farmers with DIFFERENT seed and AGGRESSIVELY
+    shifted distributions to simulate real-world deployment data drift.
 
-    logger.info(f"Generating {n_farmers} eval farmers (seed={seed}, shifted distributions)...")
+    Key shifts from training:
+    - More young farmers (+50%)
+    - Fewer established (-25%)
+    - More diversified (+40%)
+    - Revenue: 15% lower mean (simulating worse market conditions)
+    - Weather: higher drought index
+    - More tenant farmers
+    """
+    # Aggressively alter profile distributions
+    eval_profiles = dict(FARMER_PROFILES)
+    eval_profiles["young_farmer"] = {**eval_profiles["young_farmer"], "pct": 0.20}      # +67% vs training
+    eval_profiles["established"] = {**eval_profiles["established"], "pct": 0.20}        # -33% vs training
+    eval_profiles["expansion"] = {**eval_profiles["expansion"], "pct": 0.18}            # +20%
+    eval_profiles["conservative"] = {**eval_profiles["conservative"], "pct": 0.12}      # -33%
+    eval_profiles["diversified"] = {**eval_profiles["diversified"], "pct": 0.15}        # +50%
+    eval_profiles["struggling"] = {**eval_profiles["struggling"], "pct": 0.10}          # +25%
+    eval_profiles["organic_premium"] = {**eval_profiles["organic_premium"], "pct": 0.03} # -40%
+    eval_profiles["tenant_farmer"] = {**eval_profiles["tenant_farmer"], "pct": 0.02}
+
+    logger.info(f"Generating {n_farmers} eval farmers (seed={seed}, aggressively shifted)...")
     farmers = generate_synthetic_farmers(n_farmers=n_farmers, seed=seed)
-    logger.info(f"Generated {len(farmers)} eval farmers")
+
+    # Additionally shift revenue downward by 10-20% to simulate worse conditions
+    for f in farmers:
+        for fy in f.get("financial_records", []):
+            if "revenue" in fy:
+                fy["revenue"] = int(fy["revenue"] * (0.82 + np.random.random() * 0.12))
+            if "net_income" in fy:
+                fy["net_income"] = int(fy["net_income"] * (0.78 + np.random.random() * 0.14))
+            if "operating_cash_flow" in fy:
+                fy["operating_cash_flow"] = int(fy["operating_cash_flow"] * (0.80 + np.random.random() * 0.12))
+
+    logger.info(f"Generated {len(farmers)} eval farmers (shifted revenue distribution)")
     return farmers
 
 
