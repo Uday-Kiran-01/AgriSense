@@ -202,8 +202,8 @@ async def run_prediction(farmer_id: int, db: Session = Depends(get_db)):
         ops.__dict__ if ops else None,
     )
 
-    # Fetch external data
-    external = await get_all_external_data()
+    # Fetch external data for farmer's region
+    external = await get_all_external_data(region=farmer.state or "Skane")
 
     # Engineer features and predict
     features = engineer_features(
@@ -546,7 +546,7 @@ def get_shap_explanation(farmer_id: int, db: Session = Depends(get_db)):
         raise HTTPException(404, "No financial records")
 
     ratios = calculate_financial_ratios([r.__dict__ for r in financials], [l.__dict__ for l in loans], ops.__dict__ if ops else None)
-    external = asyncio.run(get_all_external_data())
+    external = asyncio.run(get_all_external_data(region=farmer.state or "Skane"))
     features = engineer_features(ratios, external, ops.__dict__ if ops else None, [l.__dict__ for l in loans])
 
     from ..services.ml_service import FEATURE_NAMES
@@ -692,7 +692,7 @@ async def create_decision_memo(farmer_id: int, db: Session = Depends(get_db)):
         ops.__dict__ if ops else None,
     )
 
-    external = await get_all_external_data()
+    external = await get_all_external_data(region=farmer.state or "Skane")
 
     prediction_data = latest_prediction.__dict__ if latest_prediction else {
         "credit_risk_score": 0.5,
@@ -808,7 +808,7 @@ async def get_full_profile(farmer_id: int, db: Session = Depends(get_db)):
         ops[0].__dict__ if ops else None,
     ) if financials else {}
 
-    external = await get_all_external_data()
+    external = await get_all_external_data(region=farmer.state or "Skane")
 
     return FullProfile(
         farmer={k: str(v) if hasattr(v, 'isoformat') else v
@@ -898,7 +898,7 @@ async def get_environmental_score():
     from ..services.environmental_score import calculate_environmental_score
     from ..services.external_data import get_all_external_data
 
-    external = await get_all_external_data()
+    external = await get_all_external_data(region="Skane")
     score = calculate_environmental_score(
         external["weather"],
         external["commodity"],
