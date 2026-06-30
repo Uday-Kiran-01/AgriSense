@@ -1,0 +1,306 @@
+{
+  "metrics": {
+    "n_farmers_evaluated": 1000,
+    "metrics": {
+      "accuracy": 0.86,
+      "precision": 0.9868,
+      "recall": 0.7973,
+      "f1_score": 0.882,
+      "roc_auc": 0.8912,
+      "true_positives": 523,
+      "true_negatives": 337,
+      "false_positives": 7,
+      "false_negatives": 133,
+      "note": "FP = lost business opportunity. FN = missed default risk (more expensive)."
+    },
+    "risk_distribution": {
+      "low": 271,
+      "medium": 204,
+      "high": 525
+    },
+    "recommendation_distribution": {
+      "High Risk": 522,
+      "Proceed": 242,
+      "Proceed with Conditions": 218,
+      "Manual Review": 18
+    },
+    "calibration": [
+      {
+        "bin": "0%-20%",
+        "n_farmers": 46,
+        "predicted_avg_risk": 0.164,
+        "actual_default_rate": 0.304,
+        "calibrated": "False"
+      },
+      {
+        "bin": "20%-40%",
+        "n_farmers": 393,
+        "predicted_avg_risk": 0.292,
+        "actual_default_rate": 0.285,
+        "calibrated": "True"
+      },
+      {
+        "bin": "40%-60%",
+        "n_farmers": 39,
+        "predicted_avg_risk": 0.457,
+        "actual_default_rate": 0.256,
+        "calibrated": "False"
+      },
+      {
+        "bin": "60%-80%",
+        "n_farmers": 2,
+        "predicted_avg_risk": 0.631,
+        "actual_default_rate": 0.0,
+        "calibrated": "False"
+      },
+      {
+        "bin": "80%-100%",
+        "n_farmers": 144,
+        "predicted_avg_risk": 0.97,
+        "actual_default_rate": 1.0,
+        "calibrated": "True"
+      }
+    ],
+    "interesting_misclassifications": [
+      {
+        "name": "Erik Lindstrom",
+        "profile": "mixed",
+        "actual": "High Risk",
+        "predicted": "Low Risk",
+        "risk_score": 0.1002,
+        "dti": 0.0381,
+        "dscr": 16.85,
+        "liquidity": "Seasonal",
+        "possible_reason": "severe seasonal liquidity stress"
+      },
+      {
+        "name": "Sven Norberg",
+        "profile": "mixed",
+        "actual": "High Risk",
+        "predicted": "Low Risk",
+        "risk_score": 0.1122,
+        "dti": 0.0136,
+        "dscr": 35.4,
+        "liquidity": "Seasonal",
+        "possible_reason": "severe seasonal liquidity stress"
+      },
+      {
+        "name": "Erik Andersson",
+        "profile": "mixed",
+        "actual": "High Risk",
+        "predicted": "Low Risk",
+        "risk_score": 0.1185,
+        "dti": 0.0251,
+        "dscr": 16.73,
+        "liquidity": "Seasonal",
+        "possible_reason": "severe seasonal liquidity stress"
+      },
+      {
+        "name": "Mikael Jansson",
+        "profile": "established",
+        "actual": "Low Risk",
+        "predicted": "High Risk",
+        "risk_score": 0.657,
+        "dti": 0.3847,
+        "dscr": 1.25,
+        "liquidity": "Seasonal",
+        "possible_reason": "crop insurance reduced perceived risk"
+      },
+      {
+        "name": "Britta Strandberg",
+        "profile": "established",
+        "actual": "Low Risk",
+        "predicted": "High Risk",
+        "risk_score": 0.6043,
+        "dti": 0.3854,
+        "dscr": 1.25,
+        "liquidity": "Seasonal",
+        "possible_reason": "conservative model over-weighs financial ratios"
+      },
+      {
+        "name": "Anders Hansson",
+        "profile": "established",
+        "actual": "Low Risk",
+        "predicted": "High Risk",
+        "risk_score": 0.5655,
+        "dti": 0.4306,
+        "dscr": 1.25,
+        "liquidity": "Seasonal",
+        "possible_reason": "crop insurance reduced perceived risk"
+      }
+    ],
+    "by_profile": {
+      "mixed": {
+        "count": 433,
+        "correct": 388,
+        "avg_risk": 0.736,
+        "accuracy": 0.896
+      },
+      "conservative": {
+        "count": 82,
+        "correct": 64,
+        "avg_risk": 0.525,
+        "accuracy": 0.78
+      },
+      "established": {
+        "count": 452,
+        "correct": 382,
+        "avg_risk": 0.617,
+        "accuracy": 0.845
+      },
+      "young_farmer": {
+        "count": 12,
+        "correct": 9,
+        "avg_risk": 0.331,
+        "accuracy": 0.75
+      },
+      "expansion": {
+        "count": 21,
+        "correct": 17,
+        "avg_risk": 0.594,
+        "accuracy": 0.81
+      }
+    }
+  },
+  "threshold_curve": {
+    "thresholds": [
+      0.2,
+      0.25,
+      0.3,
+      0.35,
+      0.4,
+      0.45,
+      0.5,
+      0.55,
+      0.6,
+      0.65,
+      0.7
+    ],
+    "curve": [
+      {
+        "threshold": 0.2,
+        "precision": 0.673,
+        "recall": 0.9787,
+        "f1": 0.7975,
+        "accuracy": 0.674,
+        "manual_reviews": 954,
+        "false_positives": 312,
+        "false_negatives": 14,
+        "interpretation": "Growth-focused: higher recall, more approvals, some risky loans may pass"
+      },
+      {
+        "threshold": 0.25,
+        "precision": 0.7088,
+        "recall": 0.9314,
+        "f1": 0.805,
+        "accuracy": 0.704,
+        "manual_reviews": 862,
+        "false_positives": 251,
+        "false_negatives": 45,
+        "interpretation": "Growth-focused: higher recall, more approvals, some risky loans may pass"
+      },
+      {
+        "threshold": 0.3,
+        "precision": 0.7915,
+        "recall": 0.8796,
+        "f1": 0.8332,
+        "accuracy": 0.769,
+        "manual_reviews": 729,
+        "false_positives": 152,
+        "false_negatives": 79,
+        "interpretation": "Growth-focused: higher recall, more approvals, some risky loans may pass"
+      },
+      {
+        "threshold": 0.35,
+        "precision": 0.8792,
+        "recall": 0.8323,
+        "f1": 0.8551,
+        "accuracy": 0.815,
+        "manual_reviews": 621,
+        "false_positives": 75,
+        "false_negatives": 110,
+        "interpretation": "Growth-focused: higher recall, more approvals, some risky loans may pass"
+      },
+      {
+        "threshold": 0.4,
+        "precision": 0.9447,
+        "recall": 0.8079,
+        "f1": 0.871,
+        "accuracy": 0.843,
+        "manual_reviews": 561,
+        "false_positives": 31,
+        "false_negatives": 126,
+        "interpretation": "Balanced-growth: good recall, moderate review volume"
+      },
+      {
+        "threshold": 0.45,
+        "precision": 0.9741,
+        "recall": 0.8018,
+        "f1": 0.8796,
+        "accuracy": 0.856,
+        "manual_reviews": 540,
+        "false_positives": 14,
+        "false_negatives": 130,
+        "interpretation": "Balanced-growth: good recall, moderate review volume"
+      },
+      {
+        "threshold": 0.5,
+        "precision": 0.9868,
+        "recall": 0.7973,
+        "f1": 0.882,
+        "accuracy": 0.86,
+        "manual_reviews": 530,
+        "false_positives": 7,
+        "false_negatives": 133,
+        "interpretation": "Standard: balanced precision and recall"
+      },
+      {
+        "threshold": 0.55,
+        "precision": 0.9924,
+        "recall": 0.7942,
+        "f1": 0.8823,
+        "accuracy": 0.861,
+        "manual_reviews": 525,
+        "false_positives": 4,
+        "false_negatives": 135,
+        "interpretation": "Standard: balanced precision and recall"
+      },
+      {
+        "threshold": 0.6,
+        "precision": 0.9962,
+        "recall": 0.7927,
+        "f1": 0.8829,
+        "accuracy": 0.862,
+        "manual_reviews": 522,
+        "false_positives": 2,
+        "false_negatives": 136,
+        "interpretation": "Conservative: higher precision, fewer false approvals"
+      },
+      {
+        "threshold": 0.65,
+        "precision": 0.9981,
+        "recall": 0.7927,
+        "f1": 0.8836,
+        "accuracy": 0.863,
+        "manual_reviews": 521,
+        "false_positives": 1,
+        "false_negatives": 136,
+        "interpretation": "Conservative: higher precision, fewer false approvals"
+      },
+      {
+        "threshold": 0.7,
+        "precision": 1.0,
+        "recall": 0.7927,
+        "f1": 0.8844,
+        "accuracy": 0.864,
+        "manual_reviews": 520,
+        "false_positives": 0,
+        "false_negatives": 136,
+        "interpretation": "Risk-averse: maximum precision, most applications sent for review"
+      }
+    ],
+    "n_evaluated": 1000,
+    "note": "Lower threshold = higher recall (catch more risky farmers) but more false positives (unnecessary manual reviews). Higher threshold = higher precision (fewer false alarms) but more false negatives (missed defaults \u2014 more expensive)."
+  },
+  "n_samples": 1000
+}

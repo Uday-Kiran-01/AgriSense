@@ -1,0 +1,33 @@
+{
+  "metrics": {
+    "n_farmers_evaluated": 1000,
+    "metrics": {
+      "accuracy": 0.86,
+      "precision": 0.9868,
+      "recall": 0.7973,
+      "f1_score": 0.882,
+      "roc_auc": 0.8912,
+      "true_positives": 523,
+      "true_negatives": 337,
+      "false_positives": 7,
+      "false_negatives": 133,
+      "note": "FP = lost business opportunity. FN = missed default risk (more expensive)."
+    },
+    "risk_distribution": {
+      "low": 271,
+      "medium": 204,
+      "high": 525
+    },
+    "recommendation_distribution": {
+      "High Risk": 522,
+      "Proceed": 242,
+      "Proceed with Conditions": 218,
+      "Manual Review": 18
+    },
+    "calibration": [
+      {
+        "bin": "0%-20%",
+        "n_farmers": 46,
+        "predicted_avg_risk": 0.164,
+        "actual_default_rate": 0.304,
+        "calibrated": 

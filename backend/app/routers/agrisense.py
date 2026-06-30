@@ -23,7 +23,7 @@ from ..schemas import (
 )
 from ..services.financial_analysis import calculate_financial_ratios
 from ..services.ml_service import engineer_features, predict
-from ..services.scenario_analysis import run_scenario
+from ..services.scenario_analysis import run_single_scenario, _generate_investment_narrative
 from ..services.gemini_service import generate_decision_memo, explain_financial_metric
 from ..services.external_data import get_all_external_data
 from ..logger import get_logger
@@ -561,7 +561,8 @@ def get_shap_explanation(farmer_id: int, db: Session = Depends(get_db)):
 def run_deployment_evaluation(n_farmers: int = 1000, seed: int = 999):
     """Generate 1000 unseen farmers and evaluate model performance."""
     from ..services.evaluation import (
-        generate_evaluation_set, run_batch_inference, compute_evaluation_metrics,
+        generate_evaluation_set, run_batch_inference,
+        compute_evaluation_metrics, compute_threshold_curve,
     )
 
     logger.info(f"Generating {n_farmers} eval farmers (seed={seed})...")
@@ -572,6 +573,7 @@ def run_deployment_evaluation(n_farmers: int = 1000, seed: int = 999):
 
     logger.info("Computing evaluation metrics...")
     metrics = compute_evaluation_metrics(results)
+    threshold_curve = compute_threshold_curve(results)
 
     # Save to disk
     import json
@@ -587,6 +589,7 @@ def run_deployment_evaluation(n_farmers: int = 1000, seed: int = 999):
         "status": "complete",
         "n_farmers": len(results),
         "metrics": metrics,
+        "threshold_curve": threshold_curve,
         "saved_to": f"data/evaluations/evaluation_{timestamp}.json",
     }
 

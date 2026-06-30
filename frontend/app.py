@@ -1377,71 +1377,127 @@ elif page == "How It Works":
 # Page: Model Evaluation
 # ===========================================================================
 elif page == "Model Evaluation":
-    st.markdown("## 🧪 Model Evaluation — Deployment Simulation")
-    st.markdown("""<div class="info-box">Evaluates model on <strong>1,000 unseen farmers</strong> with different seed and shifted distributions.</div>""", unsafe_allow_html=True)
-
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        if st.button("🚀 Run Evaluation (1,000 farmers)", type="primary", use_container_width=True):
-            with st.spinner("Generating 1,000 unseen farmers and running inference... (30-60s)"):
-                try:
-                    resp = requests.post(f"{API_BASE}/ml/evaluate", params={"n_farmers": 1000, "seed": 999}, timeout=120)
-                    if resp.status_code == 200:
-                        st.success(f"✅ {resp.json().get('n_farmers', 0)} farmers evaluated.")
-                        st.rerun()
-                    else:
-                        st.error(f"Error: {resp.status_code}")
-                except Exception as e:
-                    st.error(f"Backend error: {e}")
-    with col2:
-        st.caption("Different seed + shifted distributions from training.")
+    st.markdown("## Model Evaluation - Deployment Simulation")
+    st.markdown("""<div class="info-box">Evaluates on <strong>1,000 unseen farmers</strong> — different seed, shifted distributions from training. Synthetic data only — not production performance.</div>""", unsafe_allow_html=True)
 
     eval_resp = fetch_json("/ml/latest-evaluation")
     if eval_resp:
         metrics = eval_resp.get("metrics", {})
         m = metrics.get("metrics", {})
+        curve_data = eval_resp.get("threshold_curve", {})
 
         st.markdown("---")
-        st.markdown(f"### 📊 Overall Performance ({metrics.get('n_farmers_evaluated', 0)} farmers)")
+        st.markdown(f"### Performance ({metrics.get('n_farmers_evaluated', 0)} unseen farmers)")
+
         col1, col2, col3, col4, col5 = st.columns(5)
         with col1: st.metric("Accuracy", f"{m.get('accuracy', 0):.1%}")
         with col2: st.metric("Precision", f"{m.get('precision', 0):.1%}")
         with col3: st.metric("Recall", f"{m.get('recall', 0):.1%}")
         with col4: st.metric("F1", f"{m.get('f1_score', 0):.3f}")
         with col5: st.metric("ROC-AUC", f"{m.get('roc_auc', 0):.3f}")
-        st.caption(m.get("note", ""))
 
-        # Risk distribution
-        risk = metrics.get("risk_distribution", {})
-        risk_df = pd.DataFrame({"Level": ["Low", "Medium", "High"], "Farmers": [risk.get("low",0), risk.get("medium",0), risk.get("high",0)]})
-        fig = px.bar(risk_df, x="Level", y="Farmers", color="Level", color_discrete_map={"Low":"#2e7d32","Medium":"#f57f17","High":"#c62828"})
-        fig.update_layout(height=250, showlegend=False, margin=dict(l=0,r=0,t=0,b=0))
-        st.plotly_chart(fig, use_container_width=True)
+        st.caption("Synthetic hold-out dataset. Not production lending performance.")
 
-        # Calibration
-        cal = metrics.get("calibration", [])
-        if cal:
-            st.markdown("### 🎯 Calibration")
-            cal_df = pd.DataFrame(cal)
+        # Confusion matrix
+        cm_df = pd.DataFrame([
+            [f"TN: {m.get('true_negatives', 0)}", f"FP: {m.get('false_positives', 0)}"],
+            [f"FN: {m.get('false_negatives', 0)}", f"TP: {m.get('true_positives', 0)}"],
+        ], index=["Actual: Low Risk", "Actual: High Risk"], columns=["Pred: Low Risk", "Pred: High Risk"])
+        st.dataframe(cm_df, use_container_width=True)
+        st.caption("FP = lost business. FN = missed defaults (more expensive).")
+
+        # Threshold slider
+        st.markdown("---")
+        st.markdown("### Decision Threshold Trade-off")
+
+        if curve_data:
+            curve = curve_data.get("curve", [])
+            thresholds = [c["threshold"] for c in curve]
+            default_idx = thresholds.index(0.50) if 0.50 in thresholds else 5
+
+            selected_t = st.select_slider(
+                "Decision Threshold",
+                options=thresholds,
+                value=0.50,
+                format_func=lambda t: f"{t:.2f}",
+            )
+
+            selected = [c for c in curve if c["threshold"] == selected_t][0]
+
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Precision", f"{selected['precision']:.1%}")
+            with col2:
+                st.metric("Recall", f"{selected['recall']:.1%}")
+            with col3:
+                st.metric("F1", f"{selected['f1']:.3f}")
+            with col4:
+                st.metric("Sent to Review", selected["manual_reviews"])
+
+            st.info(f"**{selected['interpretation']}**")
+
+            # Trade-off chart
+            chart_df = pd.DataFrame(curve)
             fig = go.Figure()
-            fig.add_trace(go.Scatter(x=cal_df["predicted_avg_risk"], y=cal_df["actual_default_rate"], mode="lines+markers", name="Model"))
-            fig.add_trace(go.Scatter(x=[0,1], y=[0,1], mode="lines", name="Perfect", line=dict(color="#999", dash="dash")))
-            fig.update_layout(height=280, xaxis_title="Predicted", yaxis_title="Actual", margin=dict(l=0,r=0,t=10,b=0))
+            fig.add_trace(go.Scatter(x=chart_df["recall"], y=chart_df["precision"],
+                                     mode="lines+markers", name="Threshold curve",
+                                     text=[f"t={t:.2f}" for t in chart_df["threshold"]],
+                                     line=dict(color="#2e7d32", width=3)))
+            fig.add_trace(go.Scatter(x=[selected["recall"]], y=[selected["precision"]],
+                                     mode="markers", name=f"t={selected_t:.2f}",
+                                     marker=dict(size=15, color="#c62828")))
+            fig.update_layout(height=350, xaxis_title="Recall (catch more risky farmers ->)",
+                              yaxis_title="Precision (fewer false alarms ->)",
+                              margin=dict(l=0, r=0, t=10, b=0))
             st.plotly_chart(fig, use_container_width=True)
+
+            # Business trade-off table
+            st.markdown("**Business Impact by Threshold:**")
+            tradeoff_data = []
+            for c in curve:
+                if c["threshold"] in [0.30, 0.40, 0.50, 0.60]:
+                    tradeoff_data.append({
+                        "Threshold": f"{c['threshold']:.2f}",
+                        "Precision": f"{c['precision']:.1%}",
+                        "Recall": f"{c['recall']:.1%}",
+                        "Reviews": c["manual_reviews"],
+                        "FP (unnecessary)": c["false_positives"],
+                        "FN (missed defaults)": c["false_negatives"],
+                        "Use Case": c["interpretation"][:40],
+                    })
+            st.dataframe(pd.DataFrame(tradeoff_data), use_container_width=True, hide_index=True)
 
         # Misclassifications
         mis = metrics.get("interesting_misclassifications", [])
         if mis:
-            st.markdown("### 🔍 Interesting Misclassifications")
-            st.dataframe(pd.DataFrame(mis), use_container_width=True, hide_index=True)
+            st.markdown("---")
+            st.markdown("### Example Mistakes")
+            mis_data = []
+            for m in mis:
+                typ = "False Negative" if m["actual"] == "High Risk" else "False Positive"
+                cost = "Missed default (expensive)" if typ == "False Negative" else "Lost business opportunity"
+                mis_data.append({
+                    "Farmer": m["name"],
+                    "Type": typ,
+                    "Actual": m["actual"],
+                    "Predicted": m["predicted"],
+                    "Risk": f"{m['risk_score']:.1%}",
+                    "DTI": f"{m['dti']:.1%}",
+                    "DSCR": f"{m['dscr']:.2f}",
+                    "Cost": cost,
+                    "Reason": m.get("possible_reason", "N/A"),
+                })
+            st.dataframe(pd.DataFrame(mis_data), use_container_width=True, hide_index=True)
 
-        st.markdown("### 📊 By Profile")
-        by_prof = metrics.get("by_profile", {})
-        if by_prof:
-            prof_data = [{"Profile": p.replace("_"," ").title(), "Count": v["count"], "Accuracy": f"{v['accuracy']:.1%}", "Avg Risk": f"{v['avg_risk']:.1%}"} for p, v in by_prof.items()]
-            st.dataframe(pd.DataFrame(prof_data), use_container_width=True, hide_index=True)
+        # Caveat
+        st.markdown("---")
+        st.warning(
+            "The model achieved these results on a **synthetic hold-out dataset** of 1,000 previously unseen farmers. "
+            "These results demonstrate the evaluation pipeline but should not be interpreted as production performance "
+            "on real lending data. All recommendations are advisory. Final decisions by human loan officers."
+        )
     else:
-        st.info("No evaluation yet. Click 'Run Evaluation' above.")
+        st.info("No evaluation yet. Run the evaluation script: python run_eval.py")
 
 
 # ===========================================================================
