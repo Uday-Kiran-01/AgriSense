@@ -1,0 +1,19 @@
+# Docker Compose for AgriSense AI
+version: "3.9"
+
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"   # FastAPI
+      - "8501:8501"   # Streamlit
+    environment:
+      - DATABASE_URL=sqlite:///./data/agrisense.db
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - WEATHER_API_KEY=${WEATHER_API_KEY:-}
+      - COMMODITY_API_KEY=${COMMODITY_API_KEY:-}
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./data:/app/data
+      - ./.env:/app/.env:ro
+    restart: unless-stopped
