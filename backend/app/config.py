@@ -1,6 +1,11 @@
 """
 AgriSense AI Configuration
 Loads settings from .env file with sensible defaults.
+
+External data sources are FREE and PUBLIC — no API keys required:
+  - SMHI (Swedish Meteorological and Hydrological Institute) — weather
+  - EU Agri-Food Data Portal (European Commission) — commodity prices
+  - Gemini AI (Google) — decision memo generation (optional)
 """
 import os
 from pathlib import Path
@@ -19,19 +24,21 @@ class Settings:
         "DATABASE_URL", f"sqlite:///{BASE_DIR / 'data' / 'agrisense.db'}"
     )
 
-    # Gemini AI
+    # Gemini AI (optional — falls back to rule-based if not configured)
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
 
-    # Weather API
-    WEATHER_API_KEY: str = os.getenv("WEATHER_API_KEY", "")
-    WEATHER_API_BASE_URL: str = os.getenv(
-        "WEATHER_API_BASE_URL", "https://api.openweathermap.org/data/3.0"
+    # ---- Free Public APIs ----
+
+    # SMHI Open Data — Swedish weather (no API key required)
+    SMHI_BASE_URL: str = os.getenv(
+        "SMHI_BASE_URL",
+        "https://opendata-download-metobs.smhi.se/api/version/1.0",
     )
 
-    # Commodity API
-    COMMODITY_API_KEY: str = os.getenv("COMMODITY_API_KEY", "")
-    COMMODITY_API_BASE_URL: str = os.getenv(
-        "COMMODITY_API_BASE_URL", "https://www.alphavantage.co/query"
+    # EU Agri-Food Data Portal — commodity prices (no API key required)
+    EU_AGRIFOOD_BASE_URL: str = os.getenv(
+        "EU_AGRIFOOD_BASE_URL",
+        "https://api.tech.ec.europa.eu/agrifood",
     )
 
     # App
@@ -49,16 +56,6 @@ class Settings:
     def gemini_available(self) -> bool:
         """Check if Gemini API key is configured."""
         return bool(self.GEMINI_API_KEY) and self.GEMINI_API_KEY != "your_gemini_api_key_here"
-
-    @property
-    def weather_api_available(self) -> bool:
-        """Check if weather API key is configured."""
-        return bool(self.WEATHER_API_KEY) and self.WEATHER_API_KEY != "your_openweathermap_api_key_here"
-
-    @property
-    def commodity_api_available(self) -> bool:
-        """Check if commodity API key is configured."""
-        return bool(self.COMMODITY_API_KEY) and self.COMMODITY_API_KEY != "your_alphavantage_api_key_here"
 
 
 settings = Settings()
