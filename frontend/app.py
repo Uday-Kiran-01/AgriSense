@@ -523,6 +523,59 @@ elif page == "💰 Financial Analysis":
     else:
         st.warning("Financial data not available. Ensure the backend is running.")
 
+    # ---- Liquidity Stress Test ----
+    st.markdown("---")
+    st.markdown("### 💧 Seasonal Liquidity Stress Test")
+    st.caption("Agriculture is seasonal. Annual DSCR doesn't show monthly cash gaps.")
+
+    liq_data = fetch_json(f"/farmers/{FARMER_ID}/liquidity-stress-test")
+    if liq_data:
+        summary = liq_data.get("summary", {})
+        rating = summary.get("liquidity_rating", "")
+        rating_color = "#2e7d32" if "Strong" in rating else "#f57f17" if "Adequate" in rating or "Seasonal" in rating else "#c62828"
+
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Negative Months", summary.get("total_negative_months", 0))
+        with col2:
+            st.metric("Lowest Balance", f"{summary.get('lowest_cumulative_balance', 0):,.0f} kr")
+        with col3:
+            st.metric("Working Capital Gap", f"{summary.get('working_capital_needed', 0):,.0f} kr")
+        with col4:
+            st.markdown(f"**Rating:** <span style='color:{rating_color}'>{rating}</span>", unsafe_allow_html=True)
+
+        # Monthly cash flow chart
+        months_data = liq_data.get("monthly_cash_flows", [])
+        if months_data:
+            df = pd.DataFrame(months_data)
+            fig = go.Figure()
+            fig.add_trace(go.Bar(x=df["name"], y=df["revenue_in"], name="Revenue In", marker_color="#2e7d32"))
+            fig.add_trace(go.Bar(x=df["name"], y=df["costs_out"], name="Costs Out", marker_color="#ef5350"))
+            fig.add_trace(go.Scatter(x=df["name"], y=df["net_cash"], name="Net Cash", mode="lines+markers",
+                                     line=dict(color="#1565c0", width=3)))
+            fig.add_hline(y=0, line_dash="dash", line_color="#666")
+            fig.update_layout(height=350, barmode="group", margin=dict(l=0, r=0, t=10, b=0),
+                              legend=dict(orientation="h", yanchor="bottom", y=1.02))
+            st.plotly_chart(fig, use_container_width=True)
+
+        # Commodity stress test
+        stress = liq_data.get("commodity_stress_test", {})
+        stress_icon = "✅" if stress.get("survives_without_deficit") else "⚠️"
+        st.info(f"{stress_icon} **{stress.get('scenario')}**: {stress.get('recommendation')}")
+
+        # Stress months detail
+        stress_months = liq_data.get("stress_months", [])
+        if stress_months:
+            with st.expander(f"🔍 Stress Months Detail ({len(stress_months)} months with negative cash flow)"):
+                for sm in stress_months:
+                    st.markdown(
+                        f"**{sm['name']}**: Revenue {sm['revenue_in']:,.0f} kr → "
+                        f"Costs {sm['costs_out']:,.0f} kr → "
+                        f"Loan {sm['loan_out']:,.0f} kr → "
+                        f"**Net: {sm['net_cash']:+,.0f} kr** "
+                        f"(Balance: {sm['cumulative_balance']:,.0f} kr)"
+                    )
+
 
 # ===========================================================================
 # Page: Existing Loans

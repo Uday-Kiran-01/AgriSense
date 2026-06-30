@@ -460,6 +460,84 @@ def get_decision_readiness(farmer_id: int, db: Session = Depends(get_db)):
         [r.__dict__ for r in financials],
         [l.__dict__ for l in loans],
         ops.__dict__ if ops else None,
+        model_confidence=latest_pred.model_confidence if latest_pred else None,
+    )
+    return report
+
+
+# ---------------------------------------------------------------------------
+# Liquidity Stress Test (Seasonal Cash Flow)
+# ---------------------------------------------------------------------------
+@router.get("/farmers/{farmer_id}/liquidity-stress-test")
+def get_liquidity_stress_test(farmer_id: int, db: Session = Depends(get_db)):
+    """Run seasonal cash flow analysis and liquidity stress test."""
+    from ..services.liquidity_analysis import run_liquidity_stress_test
+
+    financials = (
+        db.query(FinancialRecord)
+        .filter(FinancialRecord.farmer_id == farmer_id)
+        .order_by(FinancialRecord.year.desc())
+        .first()
+    )
+    loans = (
+        db.query(ExistingLoan)
+        .filter(ExistingLoan.farmer_id == farmer_id)
+        .all()
+    )
+    ops = (
+        db.query(OperationalData)
+        .filter(OperationalData.farmer_id == farmer_id)
+        .first()
+    )
+
+    if not financials:
+        raise HTTPException(404, "No financial records found")
+
+    annual_revenue = financials.revenue or 0
+    annual_opex = financials.operating_expenses or 0
+    crop = ops.crop_type if ops else "Mixed Grain"
+    monthly_loans = sum(l.monthly_emi or 0 for l in loans)
+    reserves = financials.current_assets - financials.current_liabilities if financials else 0
+
+    result = run_liquidity_stress_test(
+        annual_revenue=annual_revenue,
+        annual_opex=annual_opex,
+        crop_type=crop,
+        monthly_loan_payments=monthly_loans,
+        existing_cash_reserves=max(0, reserves),
+        eu_cap_payment=115000,  # From external data
+    )
+    return result
+
+    financials = (
+        db.query(FinancialRecord)
+        .filter(FinancialRecord.farmer_id == farmer_id)
+        .order_by(FinancialRecord.year.desc())
+        .all()
+    )
+    ops = (
+        db.query(OperationalData)
+        .filter(OperationalData.farmer_id == farmer_id)
+        .first()
+    )
+    loans = (
+        db.query(ExistingLoan)
+        .filter(ExistingLoan.farmer_id == farmer_id)
+        .all()
+    )
+    latest_pred = (
+        db.query(Prediction)
+        .filter(Prediction.farmer_id == farmer_id)
+        .order_by(Prediction.created_at.desc())
+        .first()
+    )
+
+    report = run_full_readiness_assessment(
+        farmer_id,
+        documents,
+        [r.__dict__ for r in financials],
+        [l.__dict__ for l in loans],
+        ops.__dict__ if ops else None,
         n_conflicts=0,
         n_outliers=0,
         n_validation_errors=0,

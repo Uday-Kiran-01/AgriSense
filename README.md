@@ -185,10 +185,16 @@ Random Forest (scikit-learn). 3 separate models (classifier + 2 regressors). Hyp
 5-fold StratifiedKFold cross-validation. Metrics: Precision, Recall, F1, ROC-AUC, Confusion Matrix. Optimized for recall (False Negatives = missed defaults = expensive).
 
 ### Limitations
-- Synthetic data — patterns may differ from real-world agricultural lending
-- Simplified assumptions — no macroeconomic shocks, no policy changes
-- Swedish context only — not validated for other regions or regulatory regimes
-- Not suitable for production lending decisions without real-data validation
+- **Synthetic data** — patterns may differ from real-world agricultural lending
+- **Simplified assumptions** — no macroeconomic shocks, no policy changes
+- **Swedish context only** — not validated for other regions or regulatory regimes
+- **Not suitable for production** lending decisions without real-data validation
+- **CAP dependency**: Treats subsidies as farmer-level features. Does not model systemic policy changes (e.g., EU CAP reform) that would affect the entire portfolio simultaneously.
+- **Portfolio correlation**: Evaluates farmers individually. Does not model correlated defaults across a lender's portfolio (e.g., all wheat farmers in Skåne affected by a single price collapse).
+- **Land valuation**: Uses synthetic comparable-sales estimates (simplified ortsprismetoden). Real lending requires certified valuation.
+- **FX exposure**: Not modeled. Grain exporters selling in EUR would be affected by SEK/EUR fluctuations.
+- **Succession risk**: Not modeled. Average Swedish farmer age 55+. Farm transfer could affect debt servicing.
+- **Model governance**: Version, training date, and validation metrics are tracked. Automated retraining and formal validation processes are documented as future work.
 
 ### Ethical Considerations
 - All recommendations are **advisory** — final decisions remain with human loan officers
