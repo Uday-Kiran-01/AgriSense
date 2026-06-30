@@ -107,7 +107,7 @@ st.markdown(
 
 # ---- API Base URL ----
 API_BASE = "http://localhost:8000/api"
-FARMER_ID = 1  # Default demo farmer
+FARMER_ID = 2501  # Erik Johansson (demo farmer)
 
 # ---- Import and render the selected page ----
 import requests
