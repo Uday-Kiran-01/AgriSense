@@ -1,10 +1,12 @@
 # 🌱 AgriSense AI
 
-> **Explainable AI Decision Support Platform for Agricultural Finance**
+> **AI-Assisted Agricultural Lending Platform**
 
-AgriSense AI helps farmers and financial institutions make transparent financing decisions by transforming fragmented financial, operational, and environmental data into explainable AI-powered decision support.
+AgriSense AI doesn't try to automate lending decisions. It structures fragmented agricultural, financial, and environmental information into an explainable decision-support workflow. The platform combines deterministic financial analysis, machine learning predictions, seasonal liquidity modelling, scenario simulation, and peer benchmarking to help both farmers and lenders understand not only the predicted risk, but also why that risk exists and how it changes under different decisions.
 
-> 🇸🇪 **Swedish Demo** — This demo uses synthetic Swedish agricultural data with SEK (kr) currency. All personal data is fictional. GDPR compliant by design.
+> 🇸🇪 **Swedish Demo** — Synthetic data, SEK currency, GDPR compliant. 2,500 farm portfolio across 11 regions.
+
+🔗 **Live:** [github.com/Uday-Kiran-01/AgriSense](https://github.com/Uday-Kiran-01/AgriSense)
 
 ---
 ## 🔒 GDPR & Data Privacy

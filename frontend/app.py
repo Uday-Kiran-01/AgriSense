@@ -142,28 +142,89 @@ def risk_badge(level: str) -> str:
 # Page: Dashboard
 # ===========================================================================
 if page == "🏠 Dashboard":
-    st.markdown("## 📊 Portfolio Overview")
+    st.markdown("## 📊 Executive Summary")
 
-    # ---- AI Summary Card (#8) ----
-    st.markdown("""
-    <div style="background:linear-gradient(135deg,#1b5e20,#2e7d32);border-radius:12px;padding:1.25rem;margin-bottom:1rem;color:white;">
-    <h3 style="margin:0;color:white;">🤖 AI Summary</h3>
-    <p style="margin:0.5rem 0 0 0;font-size:0.95rem;opacity:0.95;">
-    AI-generated overview of farmer financial health, risk profile, and recommendation. Updated on each prediction.
-    </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # Fetch data
+    # ---- Fetch all data ----
     farmer_data = fetch_json(f"/farmers/{FARMER_ID}")
     fa_data = fetch_json(f"/farmers/{FARMER_ID}/financial-analysis")
     pred_data = fetch_json(f"/farmers/{FARMER_ID}/predictions")
     env_data = fetch_json("/environmental-score")
+    readiness = fetch_json(f"/farmers/{FARMER_ID}/decision-readiness")
+    bench = fetch_json(f"/farmers/{FARMER_ID}/peer-benchmark")
+    liq_data = fetch_json(f"/farmers/{FARMER_ID}/liquidity-stress-test")
 
+    # ---- Executive Summary Card ----
     if farmer_data and fa_data and pred_data and len(pred_data) > 0:
         latest = pred_data[0]
         ratios = fa_data.get("ratios", {})
         rec = ratios.get("recommendation_category", {})
+
+        # Assemble all statuses
+        def _status_icon(condition: bool, reverse: bool = False) -> str:
+            good = not condition if reverse else condition
+            return "🟢" if good else "🟡" if condition else "🔴"
+
+        health_score = ratios.get("composite_health_score", 50)
+        fin_status = "🟢 Strong" if health_score >= 70 else "🟡 Moderate" if health_score >= 50 else "🔴 Weak"
+
+        liq_rating = liq_data.get("summary", {}).get("liquidity_rating", "") if liq_data else ""
+        liq_status = "🟢 Strong" if "Strong" in liq_rating else "🟡 Adequate" if "Adequate" in liq_rating else "🟡 Seasonal" if "Seasonal" in liq_rating else "🔴 Stretched"
+
+        env_score = env_data.get("total_score", 50) if env_data else 50
+        env_status = "🟢 Low" if env_score <= 25 else "🟡 Moderate" if env_score <= 55 else "🔴 High"
+
+        dti = ratios.get("debt_to_income", 0)
+        debt_status = "🟢 Acceptable" if dti < 0.40 else "🟡 Elevated" if dti < 0.50 else "🔴 High"
+
+        peer_pct = bench.get("overall_percentile", 50) if bench and not bench.get("error") else 50
+        peer_status = "🟢 Above Avg" if peer_pct >= 60 else "🟡 Average" if peer_pct >= 40 else "🔴 Below Avg"
+
+        ev_quality = readiness.get("evidence_quality", {}).get("evidence_quality_pct", 50) if readiness else 50
+        ev_status = "🟢 High" if ev_quality >= 80 else "🟡 Adequate" if ev_quality >= 60 else "🔴 Low"
+
+        dr_level = readiness.get("decision_readiness", {}).get("level", "unknown") if readiness else "unknown"
+        dr_status = "🟢 Ready" if dr_level == "ready" else "🟡 Reduced" if dr_level == "reduced_confidence" else "🔴 Insufficient"
+
+        # Render the card
+        summary_rows = [
+            ("Financial Health", fin_status),
+            ("Seasonal Liquidity", liq_status),
+            ("Environmental Exposure", env_status),
+            ("Existing Debt", debt_status),
+            ("Peer Benchmark", peer_status),
+            ("Evidence Quality", ev_status),
+            ("Decision Readiness", dr_status),
+        ]
+
+        st.markdown("""
+        <div style="background:#fafafa;border:2px solid #e0e0e0;border-radius:12px;padding:1rem;margin-bottom:1rem;">
+        """, unsafe_allow_html=True)
+
+        cols = st.columns(4)
+        for i, (label, status) in enumerate(summary_rows):
+            with cols[i % 4] if i < 4 else (cols[i % 4] if i >= 4 else cols[0]):
+                st.markdown(f"**{label}**<br>{status}", unsafe_allow_html=True)
+            if i == 3:
+                st.markdown("---")
+
+        # Overall recommendation
+        cat = rec.get("category", "N/A")
+        cat_color = rec.get("color", "#666")
+        st.markdown(f"""
+        <div style="text-align:center;margin-top:0.75rem;">
+        <span style="font-size:0.85rem;color:#666;">Overall AI Recommendation</span><br>
+        <span style="font-size:1.5rem;font-weight:800;color:{cat_color};">{cat}</span>
+        </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Recommendation reasoning
+        if rec.get("reasoning"):
+            st.info(rec.get("reasoning"))
+
+    # ---- Rest of dashboard ----
+    st.markdown("---")
+    st.markdown("### 📊 Key Metrics + Timeline")
 
         # ---- Composite Scores Row (#6, #7) ----
         col1, col2, col3, col4 = st.columns(4)
