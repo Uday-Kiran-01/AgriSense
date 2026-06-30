@@ -57,43 +57,58 @@ st.markdown("""
 # ---- Sidebar ----
 with st.sidebar:
     st.image("https://img.icons8.com/color/96/tractor.png", width=64)
-    st.markdown("## 🌱 AgriSense AI")
-    st.markdown("*Explainable AI for Agricultural Finance — Swedish Demo*")
+    st.markdown("## AgriSense AI")
+    st.markdown("*Explainable AI for Agricultural Finance*")
     st.markdown("---")
 
-    # Role selector (demo toggle)
-    role = st.radio(
-        "👤 View as:",
-        ["🏦 Loan Officer", "👨‍🌾 Farmer"],
-        horizontal=True,
-    )
+    role = st.radio("View as:", ["Farmer", "Farmbond", "Bank"])
 
     st.markdown("---")
 
-    # Navigation
-    st.markdown("### 📋 Navigation")
-    page = st.radio(
-        "Go to:",
-        [
-            "🏠 Dashboard",
-            "🏦 Applications",
-            "� Data Quality",
-            "�👨‍🌾 Farmer Profile",
-            "📄 Documents",
-            "💰 Financial Analysis",
-            "🏦 Existing Loans",
-            "🌦️ External Risk",
-            "🤖 AI Prediction",
-            "� Investment Simulator",
-            "📝 Decision Memo",
-            "🧪 Model Evaluation",
-            "🏗️ How It Works",
-        ],
-        label_visibility="collapsed",
-    )
+    if role == "Farmer":
+        st.markdown("### My Farm")
+        farmer_pages = [
+            "My Dashboard",
+            "My Documents",
+            "My Finances",
+            "Investment Simulator",
+            "Weather & Markets",
+            "My Decision Memo",
+        ]
+        page = st.radio("Go to:", farmer_pages, label_visibility="collapsed")
+
+    elif role == "Farmbond":
+        st.markdown("### Portfolio Overview")
+        farmbond_pages = [
+            "Pipeline",
+            "Data Quality",
+            "Model Evaluation",
+            "Farmer Detail",
+            "How It Works",
+        ]
+        page = st.radio("Go to:", farmbond_pages, label_visibility="collapsed")
+
+    else:  # Bank
+        st.markdown("### Credit Assessment")
+        bank_pages = [
+            "Executive Summary",
+            "Applications",
+            "Farmer Profile",
+            "Documents",
+            "Financial Analysis",
+            "Existing Loans",
+            "External Risk",
+            "AI Prediction",
+            "Investment Simulator",
+            "Data Quality",
+            "Decision Memo",
+            "Model Evaluation",
+            "How It Works",
+        ]
+        page = st.radio("Go to:", bank_pages, label_visibility="collapsed")
 
     st.markdown("---")
-    st.caption("v1.1.0 | AgriSense AI")
+    st.caption("v1.2.0 | AgriSense AI")
     st.caption("Synthetic data | GDPR compliant")
 
 # ---- Header ----
@@ -142,7 +157,7 @@ def risk_badge(level: str) -> str:
 # ===========================================================================
 # Page: Dashboard
 # ===========================================================================
-if page == "🏠 Dashboard":
+if page in ["Executive Summary", "My Dashboard"]:
     st.markdown("## 📊 Executive Summary")
 
     # ---- Fetch all data ----
@@ -227,7 +242,14 @@ if page == "🏠 Dashboard":
     st.markdown("---")
     st.markdown("### 📊 Key Metrics + Timeline")
 
-        # ---- Composite Scores Row (#6, #7) ----
+    if farmer_data and fa_data and pred_data and len(pred_data) > 0:
+        latest = pred_data[0]
+        ratios = fa_data.get("ratios", {})
+        trends = ratios.get("trends", {})
+        rec = ratios.get("recommendation_category", {})
+
+        # ---- Composite Scores Row ----
+        col1, col2, col3, col4 = st.columns(4)
         col1, col2, col3, col4 = st.columns(4)
 
         with col1:
@@ -421,7 +443,7 @@ if page == "🏠 Dashboard":
 # ===========================================================================
 # Page: Farmer Profile
 # ===========================================================================
-elif page == "👨‍🌾 Farmer Profile":
+elif page in ["Farmer Profile", "Farmer Detail"]:
     st.markdown("## 👨‍🌾 Farmer Profile")
 
     farmer_data = fetch_json(f"/farmers/{FARMER_ID}")
@@ -495,7 +517,7 @@ elif page == "👨‍🌾 Farmer Profile":
 # ===========================================================================
 # Page: Documents
 # ===========================================================================
-elif page == "📄 Documents":
+elif page in ["Documents", "My Documents"]:
     st.markdown("## 📄 Digital Farmer Vault")
 
     st.markdown("""
@@ -528,7 +550,7 @@ elif page == "📄 Documents":
 # ===========================================================================
 # Page: Financial Analysis
 # ===========================================================================
-elif page == "💰 Financial Analysis":
+elif page in ["Financial Analysis", "My Finances"]:
     st.markdown("## 💰 Financial Analysis Engine")
 
     fa_data = fetch_json(f"/farmers/{FARMER_ID}/financial-analysis")
@@ -676,7 +698,7 @@ elif page == "💰 Financial Analysis":
 # ===========================================================================
 # Page: Existing Loans
 # ===========================================================================
-elif page == "🏦 Existing Loans":
+elif page == "Existing Loans":
     st.markdown("## 🏦 Existing Financing")
 
     loans_data = fetch_json(f"/farmers/{FARMER_ID}/loans")
@@ -723,7 +745,7 @@ elif page == "🏦 Existing Loans":
 # ===========================================================================
 # Page: External Risk
 # ===========================================================================
-elif page == "🌦️ External Risk":
+elif page in ["External Risk", "Weather & Markets"]:
     st.markdown("## 🌦️ External Risk Factors")
 
     ext_data = fetch_json("/external-data")
@@ -780,7 +802,7 @@ elif page == "🌦️ External Risk":
 # ===========================================================================
 # Page: AI Prediction
 # ===========================================================================
-elif page == "🤖 AI Prediction":
+elif page == "AI Prediction":
     st.markdown("## 🤖 Explainable ML Prediction")
 
     st.markdown("""
@@ -1133,7 +1155,7 @@ elif page == "� Investment Simulator":
 # ===========================================================================
 # Page: Decision Memo
 # ===========================================================================
-elif page == "📝 Decision Memo":
+elif page in ["Decision Memo", "My Decision Memo"]:
     st.markdown("## 📝 AI Decision Memo")
 
     st.markdown("""
@@ -1200,7 +1222,7 @@ elif page == "📝 Decision Memo":
 # ===========================================================================
 # Page: Bank Officer Applications (#10)
 # ===========================================================================
-elif page == "🏦 Applications":
+elif page in ["Applications", "Pipeline"]:
     st.markdown("## 🏦 Loan Applications")
 
     apps_data = fetch_json("/bank/applications?limit=50")
@@ -1260,7 +1282,7 @@ elif page == "🏦 Applications":
 # ===========================================================================
 # Page: How It Works (#9 — Architecture Diagram)
 # ===========================================================================
-elif page == "🏗️ How It Works":
+elif page == "How It Works":
     st.markdown("## 🏗️ How AgriSense AI Works")
 
     st.markdown("""
@@ -1354,7 +1376,7 @@ elif page == "🏗️ How It Works":
 # ===========================================================================
 # Page: Model Evaluation
 # ===========================================================================
-elif page == "🧪 Model Evaluation":
+elif page == "Model Evaluation":
     st.markdown("## 🧪 Model Evaluation — Deployment Simulation")
     st.markdown("""<div class="info-box">Evaluates model on <strong>1,000 unseen farmers</strong> with different seed and shifted distributions.</div>""", unsafe_allow_html=True)
 
