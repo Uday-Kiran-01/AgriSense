@@ -19,8 +19,8 @@ joblib==1.4.2
 
 # Explainability
 # Feature importance built into Random Forest (always available)
-# SHAP for per-prediction explanations (optional — heavy dependency)
-# shap==0.45.0  # Uncomment and pip install for per-prediction SHAP values
+# SHAP for per-prediction explanations
+shap==0.51.0
 
 # External APIs
 requests==2.32.3

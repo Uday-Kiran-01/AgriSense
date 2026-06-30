@@ -868,6 +868,51 @@ elif page == "🤖 AI Prediction":
         st.markdown(f"**Overall Risk:** {risk_badge(pred.get('overall_financing_risk', 'N/A'))}",
                     unsafe_allow_html=True)
 
+        # ---- SHAP Explanation ----
+        st.markdown("---")
+        st.markdown("### 🔬 SHAP Per-Prediction Explanation")
+        st.caption("Why did THIS farmer get THIS specific score?")
+
+        if st.button("🔍 Generate SHAP Explanation", use_container_width=True):
+            with st.spinner("Computing SHAP values..."):
+                shap_data = fetch_json(f"/farmers/{FARMER_ID}/shap-explanation")
+                if shap_data and shap_data.get("status") == "available":
+                    st.session_state["shap_data"] = shap_data
+                    st.rerun()
+
+        shap_data = st.session_state.get("shap_data")
+        if shap_data:
+            st.markdown(f"**Base risk:** {shap_data.get('base_value', 0):.1%} (average farmer)")
+            st.markdown(f"**{shap_data.get('waterfall_summary', '')}")
+
+            # Risk increasers
+            inc = shap_data.get("top_risk_increasers", [])
+            dec = shap_data.get("top_risk_decreasers", [])
+
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown("#### 🔴 Risk Increasers")
+                for item in inc:
+                    st.markdown(f"- **{item['feature']}**: +{item['shap_value']:.4f}")
+
+            with col2:
+                st.markdown("#### 🟢 Risk Decreasers")
+                for item in dec:
+                    st.markdown(f"- **{item['feature']}**: {item['shap_value']:.4f}")
+
+            # Combined bar chart
+            all_contrib = shap_data.get("all_contributions", [])
+            if all_contrib:
+                sh_df = pd.DataFrame(all_contrib)
+                sh_df = sh_df.sort_values("shap_value")
+                fig = px.bar(sh_df, x="shap_value", y="feature", orientation="h",
+                             color="shap_value",
+                             color_continuous_scale=[(0, "#2e7d32"), (0.5, "#f5f5f5"), (1, "#c62828")],
+                             color_continuous_midpoint=0)
+                fig.update_layout(height=350, margin=dict(l=0, r=0, t=10, b=0),
+                                  xaxis_title="SHAP Value (impact on risk prediction)")
+                st.plotly_chart(fig, use_container_width=True)
+
 
 # ===========================================================================
 # Page: Scenario Analysis

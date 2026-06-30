@@ -14,13 +14,11 @@ Usage:
 """
 import json
 import numpy as np
+import shap
 
 from ..logger import get_logger
 
 logger = get_logger(__name__)
-
-# --- Uncomment after `pip install shap` ---
-# import shap
 
 
 def generate_shap_explanation(model, features: np.ndarray,
@@ -31,16 +29,6 @@ def generate_shap_explanation(model, features: np.ndarray,
     Returns per-feature contribution to the prediction.
     Requires: pip install shap
     """
-    try:
-        import shap
-    except ImportError:
-        logger.warning("SHAP not installed. Run: pip install shap")
-        return {
-            "status": "unavailable",
-            "message": "SHAP not installed. Run: pip install shap for per-prediction explanations.",
-            "fallback": "Feature importance from Random Forest is available instead.",
-        }
-
     try:
         explainer = shap.TreeExplainer(model)
         shap_values = explainer.shap_values(features)
@@ -54,20 +42,28 @@ def generate_shap_explanation(model, features: np.ndarray,
         # Pair feature names with SHAP values
         contributions = []
         for name, val in zip(feature_names, shap_vals):
+            try:
+                v = val.item() if hasattr(val, 'item') else float(val)
+            except (TypeError, ValueError):
+                v = float(np.asarray(val).flatten()[0])
             contributions.append({
                 "feature": name,
-                "shap_value": round(float(val), 6),
-                "direction": "increases_risk" if val > 0 else "decreases_risk",
+                "shap_value": round(v, 6),
+                "direction": "increases_risk" if v > 0 else "decreases_risk",
             })
 
         # Sort by absolute impact
         contributions.sort(key=lambda x: abs(x["shap_value"]), reverse=True)
 
-        # Expected value (base prediction before any features)
-        if isinstance(explainer.expected_value, list):
-            base_value = float(explainer.expected_value[1])
-        else:
-            base_value = float(explainer.expected_value)
+        # Expected value
+        try:
+            if isinstance(explainer.expected_value, list):
+                ev = explainer.expected_value[1]
+            else:
+                ev = explainer.expected_value
+            base_value = float(np.asarray(ev).flatten()[0])
+        except Exception:
+            base_value = 0.5
 
         logger.info(f"SHAP explanation generated: {len(contributions)} features, "
                     f"base_value={base_value:.3f}")
