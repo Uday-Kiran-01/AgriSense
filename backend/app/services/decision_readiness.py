@@ -241,7 +241,7 @@ def _freshness_status(pct: float) -> str:
         return "Stale — significant data is outdated. Confidence heavily reduced."
 
 
-def assess_evidence_quality(
+def assess_evidence_reliability(
     completeness_pct: float,
     freshness_pct: float,
     n_conflicts: int = 0,
@@ -282,7 +282,7 @@ def assess_evidence_quality(
         status = "Insufficient — manual review required before assessment"
 
     return {
-        "evidence_quality_pct": quality,
+        "evidence_reliability_pct": quality,
         "status": status,
         "components": {
             "completeness": round(completeness_pct, 1),
@@ -294,7 +294,7 @@ def assess_evidence_quality(
     }
 
 
-def calculate_decision_readiness(
+def calculate_assessment_readiness(
     evidence_quality_pct: float,
     model_confidence: float | None = None,
     n_manual_review_flags: int = 0,
@@ -336,12 +336,12 @@ def calculate_decision_readiness(
         recommendation = "Human review required. Do not rely solely on AI assessment."
 
     return {
-        "decision_readiness_pct": readiness,
+        "assessment_readiness_pct": readiness,
         "level": level,
         "message": message,
         "recommendation": recommendation,
         "components": {
-            "evidence_quality": evidence_quality_pct,
+            "evidence_reliability": evidence_quality_pct,
             "model_confidence": round(model_factor, 1) if model_confidence else None,
             "manual_review_flags": n_manual_review_flags,
         },
@@ -562,12 +562,12 @@ def run_full_readiness_assessment(
     """
     completeness = assess_document_completeness(documents)
     freshness = assess_data_freshness(financial_records, operational_data)
-    evidence = assess_evidence_quality(
+    evidence = assess_evidence_reliability(
         completeness["completeness_pct"],
         freshness["freshness_pct"],
         n_conflicts, n_outliers, n_validation_errors,
     )
-    readiness = calculate_decision_readiness(
+    readiness = calculate_assessment_readiness(
         evidence["evidence_quality_pct"],
         model_confidence,
         len(completeness.get("missing_required", [])),
@@ -584,13 +584,13 @@ def run_full_readiness_assessment(
         "freshness": freshness,
         "credit_history": credit,
         "evidence_categories": evidence_cats,
-        "evidence_quality": evidence,
-        "decision_readiness": readiness,
+        "evidence_reliability": evidence,
+        "assessment_readiness": readiness,
         "summary": {
             "completeness": f"{completeness['completeness_pct']:.0f}%",
             "freshness": f"{freshness['freshness_pct']:.0f}%",
-            "evidence_quality": f"{evidence['evidence_quality_pct']:.0f}%",
-            "decision_readiness": f"{readiness['decision_readiness_pct']:.0f}%",
+            "evidence_reliability": f"{evidence['evidence_reliability_pct']:.0f}%",
+            "assessment_readiness": f"{readiness['assessment_readiness_pct']:.0f}%",
             "level": readiness["level"],
             "can_assess": readiness["level"] != "insufficient",
             "needs_human_review": readiness["level"] in ("reduced_confidence", "insufficient"),
@@ -599,8 +599,8 @@ def run_full_readiness_assessment(
         },
     }
 
-    logger.info(f"Decision readiness for farmer {farmer_id}: "
-                f"{readiness['decision_readiness_pct']:.0f}% ({readiness['level']}), "
+    logger.info(f"Assessment readiness for farmer {farmer_id}: "
+                f"{readiness['assessment_readiness_pct']:.0f}% ({readiness['level']}), "
                 f"credit={credit['profile']}")
 
     return report

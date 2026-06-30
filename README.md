@@ -215,7 +215,7 @@ Random Forest (scikit-learn). 3 separate models (classifier + 2 regressors). Hyp
 | **Backend** | FastAPI |
 | **Database** | SQLite + SQLAlchemy |
 | **ML** | Random Forest (scikit-learn) |
-| **Explainability** | Feature Importance (SHAP-ready) |
+| **Explainability** | Feature Importance + SHAP (per-prediction) |
 | **AI** | Gemini API (explanations only, never decisions) |
 | **External APIs** | OpenWeatherMap, Alpha Vantage (mock fallback) |
 | **Containerization** | Docker |
@@ -340,7 +340,7 @@ Random Forest models predict:
 - **Repayment Probability** (0-1)
 - **Additional Debt Capacity** (₹)
 
-Every prediction includes feature importance rankings.
+Every prediction includes global feature importance rankings. Per-prediction SHAP explanations available (pip install shap).
 
 ### 🔮 Scenario Analysis
 Simulate "what-if" scenarios:

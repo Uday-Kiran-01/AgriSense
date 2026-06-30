@@ -412,8 +412,8 @@ def get_investment_presets():
 # ---------------------------------------------------------------------------
 # Decision Readiness
 # ---------------------------------------------------------------------------
-@router.get("/farmers/{farmer_id}/decision-readiness")
-def get_decision_readiness(farmer_id: int, db: Session = Depends(get_db)):
+@router.get("/farmers/{farmer_id}/assessment-readiness")
+def get_assessment_readiness(farmer_id: int, db: Session = Depends(get_db)):
     """Assess whether enough evidence exists for a lending decision."""
     from ..services.decision_readiness import run_full_readiness_assessment
 
@@ -518,6 +518,42 @@ def get_peer_benchmark(farmer_id: int, db: Session = Depends(get_db)):
     """Compare farmer against similar farms in the same region."""
     from ..services.peer_benchmark import run_peer_benchmark
     return run_peer_benchmark(farmer_id, db)
+
+
+# ---------------------------------------------------------------------------
+# SHAP Explainability (optional)
+# ---------------------------------------------------------------------------
+@router.get("/farmers/{farmer_id}/shap-explanation")
+def get_shap_explanation(farmer_id: int, db: Session = Depends(get_db)):
+    """Get per-prediction SHAP explanation. Requires: pip install shap."""
+    from ..services.shap_explainer import generate_shap_explanation
+    from ..services.ml_service import load_or_train_models, engineer_features
+    from ..services.financial_analysis import calculate_financial_ratios
+    from ..services.external_data import get_all_external_data
+    import asyncio
+
+    farmer = db.get(Farmer, farmer_id)
+    if not farmer:
+        raise HTTPException(404, "Farmer not found")
+
+    # Load model
+    risk_model, _, _ = load_or_train_models()
+
+    # Gather features (same as prediction endpoint does)
+    financials = db.query(FinancialRecord).filter(FinancialRecord.farmer_id == farmer_id).order_by(FinancialRecord.year.desc()).all()
+    loans = db.query(ExistingLoan).filter(ExistingLoan.farmer_id == farmer_id).all()
+    ops = db.query(OperationalData).filter(OperationalData.farmer_id == farmer_id).first()
+
+    if not financials:
+        raise HTTPException(404, "No financial records")
+
+    ratios = calculate_financial_ratios([r.__dict__ for r in financials], [l.__dict__ for l in loans], ops.__dict__ if ops else None)
+    external = asyncio.run(get_all_external_data())
+    features = engineer_features(ratios, external, ops.__dict__ if ops else None, [l.__dict__ for l in loans])
+
+    from ..services.ml_service import FEATURE_NAMES
+    result = generate_shap_explanation(risk_model, features, FEATURE_NAMES)
+    return result
 
     financials = (
         db.query(FinancialRecord)

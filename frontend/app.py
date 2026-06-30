@@ -179,10 +179,10 @@ if page == "🏠 Dashboard":
         peer_pct = bench.get("overall_percentile", 50) if bench and not bench.get("error") else 50
         peer_status = "🟢 Above Avg" if peer_pct >= 60 else "🟡 Average" if peer_pct >= 40 else "🔴 Below Avg"
 
-        ev_quality = readiness.get("evidence_quality", {}).get("evidence_quality_pct", 50) if readiness else 50
+        ev_quality = readiness.get("evidence_reliability", {}).get("evidence_reliability_pct", 50) if readiness else 50
         ev_status = "🟢 High" if ev_quality >= 80 else "🟡 Adequate" if ev_quality >= 60 else "🔴 Low"
 
-        dr_level = readiness.get("decision_readiness", {}).get("level", "unknown") if readiness else "unknown"
+        dr_level = readiness.get("assessment_readiness", {}).get("level", "unknown") if readiness else "unknown"
         dr_status = "🟢 Ready" if dr_level == "ready" else "🟡 Reduced" if dr_level == "reduced_confidence" else "🔴 Insufficient"
 
         # Render the card
@@ -192,8 +192,8 @@ if page == "🏠 Dashboard":
             ("Environmental Exposure", env_status),
             ("Existing Debt", debt_status),
             ("Peer Benchmark", peer_status),
-            ("Evidence Quality", ev_status),
-            ("Decision Readiness", dr_status),
+            ("Evidence Reliability", ev_status),
+            ("Assessment Readiness", dr_status),
         ]
 
         st.markdown("""
@@ -286,31 +286,31 @@ if page == "🏠 Dashboard":
         }
         st.info(summaries.get(risk_level, summaries["medium"]))
 
-        # ---- Decision Readiness Scores ----
+        # ---- Assessment Readiness Scores ----
         readiness = fetch_json(f"/farmers/{FARMER_ID}/decision-readiness")
         if readiness:
             st.markdown("---")
-            st.markdown("### 🛡️ Decision Readiness")
+            st.markdown("### 🛡️ Assessment Readiness")
 
             summ = readiness.get("summary", {})
-            level = readiness.get("decision_readiness", {}).get("level", "unknown")
+            level = readiness.get("assessment_readiness", {}).get("level", "unknown")
 
             colors_level = {"ready": "#2e7d32", "reduced_confidence": "#f57f17", "insufficient": "#c62828"}
             lc = colors_level.get(level, "#666")
 
             col1, col2, col3, col4 = st.columns(4)
             with col1:
-                st.metric("Decision Readiness", f"{summ.get('decision_readiness', 'N/A')}")
+                st.metric("Assessment Readiness", f"{summ.get('assessment_readiness', 'N/A')}")
             with col2:
-                st.metric("Evidence Quality", f"{summ.get('evidence_quality', 'N/A')}")
+                st.metric("Evidence Reliability", f"{summ.get('evidence_reliability', 'N/A')}")
             with col3:
                 st.metric("Data Freshness", f"{summ.get('freshness', 'N/A')}")
             with col4:
                 st.metric("Completeness", f"{summ.get('completeness', 'N/A')}")
 
             # Readiness message
-            msg = readiness.get("decision_readiness", {}).get("message", "")
-            rec = readiness.get("decision_readiness", {}).get("recommendation", "")
+            msg = readiness.get("assessment_readiness", {}).get("message", "")
+            rec = readiness.get("assessment_readiness", {}).get("recommendation", "")
             st.markdown(f"""
             <div style="border-left:4px solid {lc};padding:0.5rem 0.75rem;background:{lc}10;border-radius:4px;margin:0.5rem 0;">
             <strong style="color:{lc};">{level.replace('_',' ').title()}</strong><br>
