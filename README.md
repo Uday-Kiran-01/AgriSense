@@ -4,6 +4,18 @@
 
 AgriSense AI helps farmers and financial institutions make transparent financing decisions by transforming fragmented financial, operational, and environmental data into explainable AI-powered decision support.
 
+> 🇸🇪 **Swedish Demo** — This demo uses synthetic Swedish agricultural data with SEK (kr) currency. All personal data is fictional. GDPR compliant by design.
+
+---
+## 🔒 GDPR & Data Privacy
+
+- **All data is synthetic** — No real personal data, names, addresses, or financial figures
+- **Fictional farmer identity** — "Erik Johansson" is a constructed persona
+- **No persistent PII** — The SQLite database contains only demo data, wiped on restart
+- **No tracking or cookies** — The Streamlit dashboard has no analytics
+- **Document references are placeholders** — No real PDFs or uploaded files
+- **Swedish context** — UC credit scores, Landshypotek/Swedbank lenders, EU CAP subsidies
+
 ---
 
 ## 🏗️ Architecture

@@ -60,7 +60,7 @@ def run_scenario(
         rate = parameters.get("interest_rate", 10)
         tenure = parameters.get("tenure_months", 36)
 
-        # Calculate monthly EMI (flat formula)
+        # Calculate monthly amortering (annuity formula)
         monthly_rate = rate / 100 / 12
         if monthly_rate > 0:
             emi = amount * monthly_rate * (1 + monthly_rate) ** tenure / ((1 + monthly_rate) ** tenure - 1)
@@ -76,7 +76,7 @@ def run_scenario(
             "on_time_payments": 0,
             "total_payments_due": 0,
         })
-        scenario_name = f"New Loan ₹{amount:,.0f}"
+        scenario_name = f"New Loan {amount:,.0f} kr"
 
     elif scenario_type == "interest":
         rate_change = parameters.get("rate_change_pct", 2)
@@ -124,7 +124,7 @@ def run_scenario(
         latest["total_assets"] += cost
         latest["depreciation"] += cost * 0.10  # 10% annual depreciation
         latest["net_income"] = latest["revenue"] - latest["operating_expenses"] - latest["interest_expense"] - latest["depreciation"]
-        scenario_name = f"Tractor Purchase ₹{cost:,.0f}"
+        scenario_name = f"Tractor Purchase {cost:,.0f} kr"
 
     else:
         return {"error": f"Unknown scenario type: {scenario_type}"}

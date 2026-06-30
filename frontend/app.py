@@ -58,7 +58,7 @@ st.markdown("""
 with st.sidebar:
     st.image("https://img.icons8.com/color/96/tractor.png", width=64)
     st.markdown("## 🌱 AgriSense AI")
-    st.markdown("*Explainable AI for Agricultural Finance*")
+    st.markdown("*Explainable AI for Agricultural Finance — Swedish Demo*")
     st.markdown("---")
 
     # Role selector (demo toggle)
@@ -90,7 +90,7 @@ with st.sidebar:
 
     st.markdown("---")
     st.caption("v1.0.0 | AgriSense AI")
-    st.caption("For demo purposes only")
+    st.caption("Synthetic data only | GDPR compliant")
 
 # ---- Header ----
 st.markdown(
@@ -150,7 +150,7 @@ if page == "🏠 Dashboard":
         with col1:
             st.metric("Farmer", farmer_data.get("full_name", "N/A"))
         with col2:
-            st.metric("CIBIL Score", farmer_data.get("cibil_score", "N/A"))
+            st.metric("UC Score", farmer_data.get("cibil_score", "N/A"))
         with col3:
             st.metric("State", farmer_data.get("state", "NA"))
         with col4:
@@ -189,7 +189,7 @@ if page == "🏠 Dashboard":
 
         with col4:
             capacity = latest.get("debt_capacity", 0)
-            st.metric("Additional Debt Capacity", f"₹{capacity:,.0f}")
+            st.metric("Additional Debt Capacity", f"{capacity:,.0f} kr")
 
         # Risk breakdown
         st.markdown("---")
@@ -248,17 +248,17 @@ elif page == "👨‍🌾 Farmer Profile":
 
         with col2:
             st.markdown("### Credit & Experience")
-            cibil = farmer_data.get("cibil_score", 0)
-            st.metric("CIBIL Score", cibil)
+            uc = farmer_data.get("cibil_score", 0)
+            st.metric("UC Score", uc)
 
-            # CIBIL gauge
+            # UC Score gauge (Swedish credit bureau)
             fig = go.Figure(go.Indicator(
                 mode="gauge+number",
-                value=cibil,
+                value=uc,
                 domain={"x": [0, 1], "y": [0, 1]},
                 gauge={
                     "axis": {"range": [300, 900]},
-                    "bar": {"color": "#2e7d32" if cibil >= 700 else "#f57f17" if cibil >= 600 else "#c62828"},
+                    "bar": {"color": "#2e7d32" if uc >= 700 else "#f57f17" if uc >= 600 else "#c62828"},
                     "steps": [
                         {"range": [300, 600], "color": "#ffcdd2"},
                         {"range": [600, 700], "color": "#fff9c4"},
@@ -266,7 +266,7 @@ elif page == "👨‍🌾 Farmer Profile":
                     ],
                     "threshold": {"line": {"color": "black", "width": 2}, "value": 700},
                 },
-                title={"text": "CIBIL Score Range"},
+                title={"text": "UC Score Range"},
             ))
             fig.update_layout(height=250, margin=dict(l=20, r=20, t=40, b=20))
             st.plotly_chart(fig, use_container_width=True)
@@ -284,9 +284,9 @@ elif page == "👨‍🌾 Farmer Profile":
 
             col1, col2, col3, col4 = st.columns(4)
             with col1:
-                st.metric("Farm Size", f"{ops.get('farm_size_acres', 0):.1f} acres")
+                st.metric("Farm Size", f"{ops.get('farm_size_acres', 0):.1f} ha")
             with col2:
-                st.metric("Crop", ops.get("crop_type", "N/A"))
+                st.metric("Crop", ops.get("crop_type", "N/A").replace("Wheat","Vete").replace("Barley","Korn"))
             with col3:
                 st.metric("Land Ownership", ops.get("land_ownership", "N/A").title())
             with col4:
@@ -299,7 +299,7 @@ elif page == "👨‍🌾 Farmer Profile":
                 st.metric("Irrigation", "✅" if ops.get("has_irrigation") else "❌")
             with col3:
                 land_val = ops.get("land_value_estimate", 0)
-                st.metric("Land Value (Est.)", f"₹{land_val:,.0f}" if land_val else "N/A")
+                st.metric("Land Value (Est.)", f"{land_val:,.0f} kr" if land_val else "N/A")
 
 
 # ===========================================================================
@@ -377,22 +377,22 @@ elif page == "💰 Financial Analysis":
 
         with col1:
             st.markdown("### 📈 Profitability & Efficiency")
-            st.metric("Working Capital", f"₹{ratios.get('working_capital', 0):,.0f}")
+            st.metric("Working Capital", f"{ratios.get('working_capital', 0):,.0f} kr")
             st.metric("Current Ratio", f"{ratios.get('current_ratio', 0):.2f}x")
             st.metric("Cash Flow Margin", f"{ratios.get('cash_flow_margin', 0):.1%}")
             st.metric("Interest Coverage", f"{ratios.get('interest_coverage', 0):.2f}x")
 
             rpa = ratios.get("revenue_per_acre")
             if rpa:
-                st.metric("Revenue per Acre", f"₹{rpa:,.0f}")
+                st.metric("Revenue per Hectare", f"{rpa:,.0f} kr")
 
         with col2:
             st.markdown("### 🏦 Leverage & Coverage")
             st.metric("Asset Coverage", f"{ratios.get('asset_coverage', 0):.2f}x")
             st.metric("Debt-to-Equity", f"{ratios.get('debt_to_equity', 0):.1%}")
-            st.metric("Total Debt Service", f"₹{ratios.get('total_annual_debt_service', 0):,.0f}/yr")
-            st.metric("Total Outstanding Debt", f"₹{ratios.get('total_outstanding_debt', 0):,.0f}")
-            st.metric("EBITDA", f"₹{ratios.get('ebitda', 0):,.0f}")
+            st.metric("Total Debt Service", f"{ratios.get('total_annual_debt_service', 0):,.0f}/yr")
+            st.metric("Total Outstanding Debt", f"{ratios.get('total_outstanding_debt', 0):,.0f} kr")
+            st.metric("EBITDA", f"{ratios.get('ebitda', 0):,.0f} kr")
 
         # Risk Flags
         flags = ratios.get("risk_flags", [])
@@ -446,26 +446,26 @@ elif page == "🏦 Existing Loans":
         with col1:
             st.metric("Active Loans", len(loans_data))
         with col2:
-            st.metric("Total Outstanding", f"₹{total_outstanding:,.0f}")
+            st.metric("Total Outstanding", f"{total_outstanding:,.0f} kr")
         with col3:
-            st.metric("Monthly EMI", f"₹{total_monthly:,.0f}")
+            st.metric("Monthly Amortering", f"{total_monthly:,.0f} kr")
 
         st.markdown("---")
 
         for loan in loans_data:
             with st.expander(
-                f"{loan['loan_type'].replace('_', ' ').title()} — ₹{loan['outstanding_balance']:,.0f}",
+                f"{loan['loan_type'].replace('_', ' ').title()} — {loan['outstanding_balance']:,.0f}",
                 expanded=True,
             ):
                 col1, col2, col3 = st.columns(3)
                 with col1:
-                    st.metric("Original Amount", f"₹{loan['original_amount']:,.0f}")
-                    st.metric("Monthly EMI", f"₹{loan['monthly_emi']:,.0f}")
+                    st.metric("Original Amount", f"{loan['original_amount']:,.0f} kr")
+                    st.metric("Monthly Amortering", f"{loan['monthly_emi']:,.0f} kr")
                 with col2:
-                    st.metric("Outstanding", f"₹{loan['outstanding_balance']:,.0f}")
+                    st.metric("Outstanding", f"{loan['outstanding_balance']:,.0f} kr")
                     st.metric("Interest Rate", f"{loan['interest_rate']}%")
                 with col3:
-                    st.metric("Annual Service", f"₹{loan['annual_debt_service']:,.0f}")
+                    st.metric("Annual Debt Service", f"{loan['annual_debt_service']:,.0f} kr")
                     ratio = loan.get("repayment_ratio", 0)
                     st.metric("Repayment Record", f"{ratio:.0%}",
                               delta="On Track" if ratio >= 0.95 else "Delayed")
@@ -511,13 +511,13 @@ elif page == "🌦️ External Risk":
         with col1:
             st.metric(
                 commodity.get("commodity_name", "Wheat"),
-                f"₹{commodity.get('commodity_price', 0):,.0f}",
+                f"{commodity.get('commodity_price', 0):,.0f} kr",
                 delta=f"{commodity.get('price_change_pct', 0):+.1f}%",
             )
         with col2:
-            st.metric("Diesel", f"₹{fuel.get('diesel_price', 0):.2f}/L")
+            st.metric("Diesel", f"{fuel.get('diesel_price', 0):.2f}/L")
         with col3:
-            st.metric("Fertilizer (Urea)", f"₹{fuel.get('fertilizer_urea', 0):.2f}/bag")
+            st.metric("Fertilizer (NPK)", f"{fuel.get('fertilizer_urea', 0):.2f}/tonne")
 
         st.caption(f"Commodity source: {commodity.get('source', 'mock')}")
 
@@ -526,9 +526,9 @@ elif page == "🌦️ External Risk":
         subsidies = ext_data.get("government_subsidies", {})
         col1, col2 = st.columns(2)
         with col1:
-            st.metric("PM-KISAN", f"₹{subsidies.get('pm_kisan', 0):,.0f}/yr")
+            st.metric("EU CAP (Gardsstod)", f"{subsidies.get('pm_kisan', 0):,.0f}/yr")
         with col2:
-            st.metric("Fertilizer Subsidy", f"₹{subsidies.get('fertilizer_subsidy', 0):,.0f}/yr")
+            st.metric("CAP Greening", f"{subsidies.get('fertilizer_subsidy', 0):,.0f}/yr")
 
     else:
         st.warning("External data not available. Ensure the backend is running.")
@@ -615,7 +615,7 @@ elif page == "🤖 AI Prediction":
             st.markdown(
                 f'<div class="metric-card" style="text-align:center;">'
                 f'<small>Additional Debt Capacity</small><br>'
-                f'<span style="font-size:2rem;font-weight:800;">₹{capacity:,.0f}</span>'
+                f'<span style="font-size:2rem;font-weight:800;">{capacity:,.0f}</span>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
@@ -659,7 +659,7 @@ elif page == "🔮 Scenario Analysis":
     elif scenario_type == "commodity":
         params["price_change_pct"] = st.slider("Commodity Price Change (%)", -50, 30, -15, 5)
     elif scenario_type == "new_loan":
-        params["loan_amount"] = st.number_input("Loan Amount (₹)", 50000, 2000000, 200000, 50000)
+        params["loan_amount"] = st.number_input("Loan Amount ()", 50000, 2000000, 200000, 50000)
         params["interest_rate"] = st.slider("Interest Rate (%)", 5.0, 18.0, 10.0, 0.5)
         params["tenure_months"] = st.slider("Tenure (months)", 12, 120, 36, 12)
     elif scenario_type == "interest":
@@ -667,8 +667,8 @@ elif page == "🔮 Scenario Analysis":
     elif scenario_type == "fuel":
         params["fuel_price_change_pct"] = st.slider("Fuel Price Increase (%)", 5, 50, 15, 5)
     elif scenario_type == "tractor_purchase":
-        params["tractor_cost"] = st.number_input("Tractor Cost (₹)", 200000, 1500000, 500000, 50000)
-        params["loan_amount"] = st.number_input("Loan Amount (₹)", 100000, 1500000, 400000, 50000)
+        params["tractor_cost"] = st.number_input("Tractor Cost ()", 200000, 1500000, 500000, 50000)
+        params["loan_amount"] = st.number_input("Loan Amount ()", 100000, 1500000, 400000, 50000)
         params["interest_rate"] = st.slider("Interest Rate (%)", 5.0, 15.0, 8.0, 0.5)
 
     if st.button("🔮 Run Scenario", type="primary", use_container_width=True):

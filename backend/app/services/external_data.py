@@ -13,21 +13,21 @@ from ..logger import get_logger
 logger = get_logger(__name__)
 
 
-async def fetch_weather_data(region: str = "Gujarat") -> dict:
+async def fetch_weather_data(region: str = "Skane") -> dict:
     """
-    Fetch weather data from OpenWeatherMap or return mock data.
+    Fetch weather data from OpenWeatherMap or return mock Swedish data.
 
     Returns dict with: rainfall_mm, temperature_celsius, drought_index, flood_risk
     """
     if settings.weather_api_available:
         try:
             async with httpx.AsyncClient() as client:
-                # Using One Call API 3.0 (requires lat/lon — using mock coords for Gujarat)
+                # Skane, Sweden coordinates (55.5°N, 13.5°E)
                 response = await client.get(
                     f"{settings.WEATHER_API_BASE_URL}/onecall",
                     params={
-                        "lat": 22.2587,
-                        "lon": 71.1924,
+                        "lat": 55.47,
+                        "lon": 13.45,
                         "appid": settings.WEATHER_API_KEY,
                         "units": "metric",
                     },
@@ -53,23 +53,24 @@ async def fetch_weather_data(region: str = "Gujarat") -> dict:
         except Exception as e:
             logger.warning(f"Weather API failed: {e}. Using mock data.")
 
-    # Mock fallback
-    rainfall = round(random.uniform(600, 1200), 1)
+    # Mock fallback — Swedish climate (Skane region)
+    rainfall = round(random.uniform(500, 750), 1)
+    temp = round(random.uniform(-2, 22), 1)  # Swedish annual range
     return {
         "rainfall_mm": rainfall,
-        "temperature_celsius": round(random.uniform(25, 35), 1),
-        "drought_index": round(max(0, 1 - (rainfall / 20)), 2),
-        "flood_risk": random.choice(["low", "low", "medium"]),
-        "source": "mock",
+        "temperature_celsius": temp,
+        "drought_index": round(max(0, 1 - (rainfall / 15)), 2),
+        "flood_risk": random.choice(["low", "low", "low"]),  # Skane is low flood risk
+        "source": "mock_smhi",
         "is_mock": True,
     }
 
 
 async def fetch_commodity_prices(commodity: str = "WHEAT") -> dict:
     """
-    Fetch commodity prices from Alpha Vantage or return mock data.
+    Fetch commodity prices from Alpha Vantage or return mock Swedish data.
 
-    Returns dict with: commodity_name, price, unit, price_change_pct
+    Returns dict with: commodity_name, price (SEK/kg), unit, price_change_pct
     """
     if settings.commodity_api_available:
         try:
@@ -89,11 +90,11 @@ async def fetch_commodity_prices(commodity: str = "WHEAT") -> dict:
                     if quote:
                         price = float(quote.get("05. price", 2200))
                         change_pct = float(quote.get("10. change percent", "0%").replace("%", ""))
-                        logger.info(f"Commodity API: {commodity} = ₹{price}")
+                        logger.info(f"Commodity API: {commodity} = {price} SEK/kg")
                         return {
                             "commodity_name": commodity,
                             "commodity_price": price,
-                            "price_unit": "INR/quintal",
+                            "price_unit": "SEK/kg",
                             "price_change_pct": change_pct,
                             "source": "alphavantage",
                             "is_mock": False,
@@ -101,38 +102,38 @@ async def fetch_commodity_prices(commodity: str = "WHEAT") -> dict:
         except Exception as e:
             logger.warning(f"Commodity API failed: {e}. Using mock data.")
 
-    # Mock fallback — realistic Indian commodity prices
+    # Mock fallback — Swedish/EU commodity prices (SEK/kg, 2024 reference)
     mock_prices = {
-        "WHEAT": (2275, 3.2),
-        "RICE": (3200, -1.5),
-        "MAIZE": (1850, 5.1),
-        "SUGARCANE": (315, 0.8),
-        "COTTON": (6200, -2.3),
+        "WHEAT": (2.48, -1.8),
+        "BARLEY": (2.10, 2.3),
+        "OATS": (2.35, -0.5),
+        "RAPESEED": (5.80, 4.1),
+        "RYE": (1.95, 1.2),
     }
-    price, change = mock_prices.get(commodity.upper(), (2200, 1.0))
+    price, change = mock_prices.get(commodity.upper(), (2.50, 1.0))
     return {
         "commodity_name": commodity,
         "commodity_price": price,
-        "price_unit": "INR/quintal",
+        "price_unit": "SEK/kg",
         "price_change_pct": change,
-        "source": "mock",
+        "source": "mock_jordbruksverket",
         "is_mock": True,
     }
 
 
 async def fetch_fuel_prices() -> dict:
-    """Fetch current fuel prices (mock always for demo)."""
+    """Fetch current fuel prices (mock Swedish prices)."""
     return {
-        "diesel_price": 92.50,
-        "petrol_price": 104.75,
-        "fertilizer_urea": 265.0,
-        "fertilizer_dap": 1350.0,
-        "source": "mock",
+        "diesel_price": 22.50,    # SEK/L (Swedish agricultural diesel ~22-24 kr/L)
+        "petrol_price": 19.85,    # SEK/L
+        "fertilizer_urea": 420.0,  # SEK/100kg (NPK equivalent)
+        "fertilizer_dap": 680.0,   # SEK/100kg
+        "source": "mock_okq8",
         "is_mock": True,
     }
 
 
-async def get_all_external_data(region: str = "Gujarat", commodity: str = "WHEAT") -> dict:
+async def get_all_external_data(region: str = "Skane", commodity: str = "WHEAT") -> dict:
     """
     Fetch all external data concurrently.
     Returns a unified external data dictionary.
@@ -146,8 +147,8 @@ async def get_all_external_data(region: str = "Gujarat", commodity: str = "WHEAT
         "commodity": commodity_data,
         "fuel": fuel,
         "government_subsidies": {
-            "pm_kisan": 6000.0,
-            "fertilizer_subsidy": 4500.0,
-            "source": "mock",
+            "eu_cap_direct": 115000.0,    # EU CAP direct payment (SEK/yr, ~230 EUR/ha × 50ha)
+            "greening_payment": 32000.0,   # CAP greening component
+            "source": "mock_jordbruksverket",
         },
     }
