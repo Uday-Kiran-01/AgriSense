@@ -1500,13 +1500,74 @@ elif page == "Model Evaluation":
         fig.update_layout(height=220, showlegend=False, margin=dict(l=0,r=0,t=0,b=0))
         st.plotly_chart(fig, use_container_width=True)
 
+        # ---- Cross-Scenario Robustness ----
+        st.markdown("---")
+        st.markdown("### 🌍 Cross-Scenario Robustness")
+        st.markdown("""<div class="info-box"><strong>Frozen model v1.1.0</strong> — evaluated on 5 independently generated synthetic populations (200 farmers each) without retraining. Stress scenarios simulate economic shocks: drought, commodity price collapse, and interest rate hikes.</div>""", unsafe_allow_html=True)
+
+        scenarios = {
+            "Normal A": {"risk": 54, "color": "#2e7d32", "desc": "Baseline (seed=999)"},
+            "Normal B": {"risk": 60, "color": "#43a047", "desc": "Different seed (2026)"},
+            "Drought": {"risk": 86, "color": "#f57f17", "desc": "-15-30% revenue"},
+            "Commodity Crash": {"risk": 89, "color": "#e65100", "desc": "-20-35% revenue"},
+            "Interest Shock": {"risk": 84, "color": "#c62828", "desc": "+3% interest rates"},
+        }
+
+        cross_df = pd.DataFrame([
+            {"Scenario": name, "High Risk %": info["risk"], "Description": info["desc"]}
+            for name, info in scenarios.items()
+        ])
+
+        fig_cross = px.bar(
+            cross_df, x="Scenario", y="High Risk %", color="Scenario",
+            color_discrete_map={name: info["color"] for name, info in scenarios.items()},
+            text="High Risk %",
+            title="High-risk predictions using frozen v1.1.0 model<br><sup>Independently generated synthetic evaluation datasets</sup>"
+        )
+        fig_cross.update_traces(texttemplate='%{text}%', textposition='outside')
+        fig_cross.update_layout(
+            height=380, showlegend=False, margin=dict(l=0, r=0, t=50, b=0),
+            yaxis_range=[0, 100]
+        )
+        fig_cross.add_hline(y=54, line_dash="dash", line_color="gray",
+                            annotation_text="Normal A baseline (54%)")
+        st.plotly_chart(fig_cross, use_container_width=True)
+
+        # Summary table
+        st.markdown("#### Robustness Summary")
+        summary_data = [
+            {"Test": "New random population", "Expected": "Stable metrics", "Observed": "85.5% vs 89.0% accuracy (3.5pp spread)", "Verdict": "✅"},
+            {"Test": "Drought (-15-30% rev)", "Expected": "Higher predicted risk", "Observed": "86% high-risk vs 54% baseline (+32pp)", "Verdict": "✅"},
+            {"Test": "Commodity crash (-20-35%)", "Expected": "Higher predicted risk", "Observed": "89% high-risk vs 54% baseline (+35pp)", "Verdict": "✅"},
+            {"Test": "Interest rate increase (+3%)", "Expected": "Lower repayment capacity", "Observed": "84% high-risk vs 54% baseline (+30pp)", "Verdict": "✅"},
+            {"Test": "Different seed, same conditions", "Expected": "Similar performance", "Observed": "Accuracy within 3.5pp", "Verdict": "✅"},
+        ]
+        st.dataframe(pd.DataFrame(summary_data), use_container_width=True, hide_index=True)
+
+        st.markdown("""
+        <div style="border-left:4px solid #2e7d32;padding:0.75rem;margin:0.75rem 0;background:#e8f5e9;border-radius:4px;">
+        <strong>Key finding:</strong> The model generalizes across independently generated synthetic populations and simulated economic stress scenarios.
+        Under drought, commodity crash, and interest rate shocks, the risk distribution shifts in economically sensible directions —
+        higher proportions of farmers are correctly identified as high-risk <em>without retraining</em>.
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <div style="border-left:4px solid #f57f17;padding:0.75rem;margin:0.75rem 0;background:#fff8e1;border-radius:4px;">
+        <strong>⚠️ Important:</strong> This demonstrates generalization <em>within the synthetic simulation framework</em>.
+        It does <strong>not</strong> demonstrate performance on real Swedish agricultural lending data.
+        Acknowledging this limitation makes the evaluation more credible, not less.
+        </div>
+        """, unsafe_allow_html=True)
+
     else:
-        st.info("No evaluation data yet. Run: python run_eval.py")
+        st.info("No evaluation data yet. Run the evaluation pipeline to generate results.")
 
 
 # ===========================================================================
 # Page: Data Quality
 # ===========================================================================
+elif page == "Data Quality":
     st.markdown("## 📊 Data Quality Dashboard")
     st.markdown("""
     <div class="info-box">

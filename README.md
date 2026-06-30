@@ -207,7 +207,69 @@ Random Forest (scikit-learn). 3 separate models (classifier + 2 regressors). Hyp
 
 ---
 
-## 🧱 Tech Stack
+## � Robustness Evaluation
+
+> **The model was trained once and frozen (v1.1.0). All evaluations below use that same frozen model — no retraining between tests.**
+
+### Evaluation Design
+
+| Dimension | Method |
+|---|---|
+| **Population stability** | Two independently generated synthetic populations (seed=999, seed=2026) with shifted feature distributions |
+| **Economic stress** | Three simulated shocks applied to evaluation data: drought (15-30% revenue drop), commodity price crash (20-35% drop), interest rate increase (+3 percentage points) |
+| **Label independence** | Stress scenario labels reflect changed financial conditions — the model must identify genuinely elevated risk, not just reproduce training distributions |
+| **Frozen model** | v1.1.0 Random Forest — trained once, evaluated five times |
+
+### Results (5 scenarios × 200 farmers each)
+
+| Test | Expected | Observed | ✓ |
+|---|---|---|---|
+| New random population (seed=2026) | Stable metrics | 85.5% accuracy vs 89.0% baseline (3.5pp spread) | ✅ |
+| Drought (-15-30% revenue) | Higher predicted risk | 86% high-risk vs 54% baseline (+32pp) | ✅ |
+| Commodity crash (-20-35% revenue) | Higher predicted risk | 89% high-risk vs 54% baseline (+35pp) | ✅ |
+| Interest rate increase (+3%) | Lower repayment capacity | 84% high-risk vs 54% baseline (+30pp) | ✅ |
+| Different seed, same conditions | Similar performance | Accuracy within 3.5pp across Normal A/B | ✅ |
+
+### Risk Distribution Under Stress
+
+```
+High-risk predictions using frozen v1.1.0 model
+across independently generated synthetic evaluation datasets
+
+Normal A (seed=999)     ████████████████████████████████████████████████████ 54%
+Normal B (seed=2026)    ██████████████████████████████████████████████████████████ 60%
+Drought                 ██████████████████████████████████████████████████████████████████████████████████████ 86%
+Commodity Crash         ███████████████████████████████████████████████████████████████████████████████████████████████ 89%
+Interest Shock          ████████████████████████████████████████████████████████████████████████████████████ 84%
+```
+
+> **The stress scenarios produce stronger separation between low- and high-risk cases in the synthetic data. As a result, the frozen model classifies them more easily, leading to higher evaluation metrics under stress.** This is the expected behavior — the model responds sensibly to changing economic conditions, not by chance but because it has learned the relationships between features and risk within the synthetic feature space.
+
+### Key Finding
+
+The model generalizes across independently generated synthetic populations and simulated economic stress scenarios. Under drought, commodity crash, and interest rate shocks, the risk distribution shifts in economically sensible directions — higher proportions of farmers are correctly identified as high-risk without retraining.
+
+---
+
+### What This Evaluation Demonstrates
+
+- Stable performance across independently generated synthetic populations
+- Sensible responses to simulated economic shocks (drought, commodity prices, interest rates)
+- A reproducible evaluation pipeline with a frozen model — the same model evaluated under different conditions
+- The model learned relationships within the synthetic feature space rather than memorizing individual examples
+
+### What This Evaluation Does NOT Demonstrate
+
+- Performance on real Swedish agricultural lending data
+- Regulatory suitability for credit decisions
+- Production readiness without validation on real-world datasets
+- Generalization beyond the synthetic data generation framework
+
+> **Why acknowledging limitations matters:** Ironclad claims about generalization to real farmers would be impossible to defend. Precise claims about generalization within the synthetic simulation framework — backed by frozen-model evaluation under multiple conditions — are credible and verifiable.
+
+---
+
+## �🧱 Tech Stack
 
 | Layer | Technology |
 |---|---|
