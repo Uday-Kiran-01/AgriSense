@@ -77,7 +77,8 @@ with st.sidebar:
         [
             "🏠 Dashboard",
             "🏦 Applications",
-            "👨‍🌾 Farmer Profile",
+            "� Data Quality",
+            "�👨‍🌾 Farmer Profile",
             "📄 Documents",
             "💰 Financial Analysis",
             "🏦 Existing Loans",
@@ -1023,6 +1024,167 @@ elif page == "🏗️ How It Works":
     > 5. ML beyond traditional analysis? ✅ Random Forest + Feature Importance
     > 6. Practical decision-support tools? ✅ Dashboard + Decision Memo
     """)
+
+
+# ===========================================================================
+# Page: Data Quality Dashboard
+# ===========================================================================
+elif page == "📊 Data Quality":
+    st.markdown("## 📊 Data Quality Dashboard")
+    st.markdown("""
+    <div class="info-box">
+    Complete preprocessing pipeline: validation, missing values, duplicates,
+    outliers, and ambiguity detection. Issues are flagged — never silently removed.
+    </div>
+    """, unsafe_allow_html=True)
+
+    dq_data = fetch_json("/data-quality/overview?limit=50")
+    farmer_dq = fetch_json(f"/farmers/{FARMER_ID}/data-quality")
+
+    if dq_data:
+        # Overview stats
+        st.markdown("### 📈 Dataset Overview")
+        col1, col2, col3, col4, col5 = st.columns(5)
+        with col1:
+            st.metric("Farmers Analyzed", dq_data.get("farmers_analyzed", 0))
+        with col2:
+            avg_q = dq_data.get("average_quality_score", 0)
+            qc = "#2e7d32" if avg_q >= 80 else "#f57f17" if avg_q >= 60 else "#c62828"
+            st.markdown(f'<h2 style="color:{qc};text-align:center;">{avg_q}/100</h2><small>Avg Quality Score</small>', unsafe_allow_html=True)
+        with col3:
+            st.metric("Validation Issues", dq_data.get("total_validation_issues", 0))
+        with col4:
+            st.metric("Outliers Found", dq_data.get("total_outliers", 0))
+        with col5:
+            st.metric("Missing Values", dq_data.get("total_missing_values", 0))
+
+        # Quality distribution
+        st.markdown("---")
+        st.markdown("### 📊 Quality Distribution")
+        dist = dq_data.get("quality_distribution", {})
+        dist_df = pd.DataFrame({
+            "Category": ["Excellent (90+)", "Good (70-89)", "Fair (50-69)", "Poor (<50)"],
+            "Farmers": [
+                dist.get("excellent_90plus", 0),
+                dist.get("good_70_89", 0),
+                dist.get("fair_50_69", 0),
+                dist.get("poor_below_50", 0),
+            ],
+        })
+        colors = ["#2e7d32", "#7cb342", "#f57f17", "#c62828"]
+        fig = px.bar(dist_df, x="Category", y="Farmers", color="Category",
+                     color_discrete_sequence=colors)
+        fig.update_layout(height=300, showlegend=False, margin=dict(l=0, r=0, t=0, b=0))
+        st.plotly_chart(fig, use_container_width=True)
+
+    # Per-farmer detail
+    if farmer_dq:
+        st.markdown("---")
+        st.markdown(f"### 🔍 Farmer Detail: ID {FARMER_ID}")
+
+        summary = farmer_dq.get("summary", {})
+
+        col1, col2, col3, col4, col5 = st.columns(5)
+        with col1:
+            st.metric("Records", summary.get("total_records", 0))
+        with col2:
+            st.metric("Validation Errors", summary.get("validation_errors", 0))
+        with col3:
+            st.metric("Missing Values", summary.get("missing_values", 0))
+        with col4:
+            st.metric("Duplicates", summary.get("duplicates", 0))
+        with col5:
+            st.metric("Outliers", summary.get("outliers", 0))
+
+        qs = summary.get("data_quality_score", 0)
+        qc = "#2e7d32" if qs >= 80 else "#f57f17" if qs >= 60 else "#c62828"
+        st.markdown(f"**Data Quality Score:** <span style='color:{qc};font-size:1.5rem;font-weight:700;'>{qs}/100</span>", unsafe_allow_html=True)
+
+        # Issues detail
+        if farmer_dq.get("validation"):
+            with st.expander(f"🔴 Validation Errors ({len(farmer_dq['validation'])})", expanded=True):
+                for v in farmer_dq["validation"][:10]:
+                    icon = "🔴" if v.get("severity") == "high" else "🟡"
+                    st.warning(f"{icon} **{v.get('field')}**: {v.get('message')} — _{v.get('action')}_")
+
+        if farmer_dq.get("outliers"):
+            with st.expander(f"⚠️ Outliers ({len(farmer_dq['outliers'])})", expanded=True):
+                for o in farmer_dq["outliers"][:10]:
+                    st.info(f"📊 **{o.get('field')}**: {o.get('message')} — _{o.get('action')}_")
+
+        if farmer_dq.get("duplicates"):
+            with st.expander(f"🔄 Duplicates ({len(farmer_dq['duplicates'])})"):
+                for d in farmer_dq["duplicates"]:
+                    st.warning(f"{d.get('message')} — _{d.get('action')}_")
+
+        if farmer_dq.get("ambiguities"):
+            with st.expander(f"⚡ Data Ambiguities ({len(farmer_dq['ambiguities'])})", expanded=True):
+                for a in farmer_dq["ambiguities"]:
+                    st.error(f"**{a.get('field')}**: {a.get('message')} — _{a.get('action')}_")
+
+    # ML Pipeline info
+    st.markdown("---")
+    st.markdown("### 🔬 ML Pipeline")
+
+    st.markdown("""
+    <table style="width:100%;font-size:0.9rem;">
+    <tr style="background:#e8f5e9;"><td><strong>Step</strong></td><td><strong>Method</strong></td><td><strong>Status</strong></td></tr>
+    <tr><td>1. Validation</td><td>Rule-based checks (min/max bounds)</td><td>✅ Active</td></tr>
+    <tr><td>2. Missing Values</td><td>Median/mode imputation + flag</td><td>✅ Active</td></tr>
+    <tr><td>3. Duplicates</td><td>Hash-based detection</td><td>✅ Active</td></tr>
+    <tr><td>4. Outliers</td><td>IQR method (flag only)</td><td>✅ Active</td></tr>
+    <tr><td>5. Standardization</td><td>Currency, unit, date conversion</td><td>✅ Active</td></tr>
+    <tr><td>6. Ambiguity</td><td>Cross-document field comparison</td><td>✅ Active</td></tr>
+    <tr><td>7. Feature Engineering</td><td>15 derived features</td><td>✅ Active</td></tr>
+    <tr style="background:#fff3e0;"><td>8. Scaling</td><td>NOT needed (RF is scale-invariant)</td><td>⏭️ Skipped by design</td></tr>
+    <tr><td>9. Encoding</td><td>Label Encoding (tree-based)</td><td>✅ Active</td></tr>
+    <tr><td>10. Train/Test</td><td>80/20 stratified split</td><td>✅ Active</td></tr>
+    <tr><td>11. Cross-Validation</td><td>5-fold StratifiedKFold</td><td>✅ Active</td></tr>
+    <tr><td>12. Hyperparameters</td><td>GridSearchCV (n_est, depth, split)</td><td>✅ Active</td></tr>
+    <tr><td>13. Evaluation</td><td>Precision, Recall, F1, ROC-AUC, Confusion Matrix</td><td>✅ Active</td></tr>
+    </table>
+    """, unsafe_allow_html=True)
+
+    # Show evaluation if available
+    eval_data = fetch_json("/ml/evaluation")
+    if eval_data:
+        st.markdown("---")
+        st.markdown("### 📈 Latest Model Evaluation")
+
+        ev = eval_data.get("evaluation", {}).get("risk_classifier", {})
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("ROC-AUC", f"{ev.get('roc_auc', 0):.3f}")
+        with col2:
+            st.metric("Precision", f"{ev.get('precision', 0):.3f}")
+        with col3:
+            st.metric("Recall", f"{ev.get('recall', 0):.3f}")
+        with col4:
+            st.metric("F1 Score", f"{ev.get('f1_score', 0):.3f}")
+
+        cm = ev.get("confusion_matrix", {})
+        if cm:
+            st.markdown("#### Confusion Matrix")
+            cm_df = pd.DataFrame([
+                ["TN: " + str(cm.get("true_negative", 0)), "FP: " + str(cm.get("false_positive", 0))],
+                ["FN: " + str(cm.get("false_negative", 0)), "TP: " + str(cm.get("true_positive", 0))],
+            ], index=["Actual: Low Risk", "Actual: High Risk"],
+               columns=["Pred: Low Risk", "Pred: High Risk"])
+            st.dataframe(cm_df, use_container_width=True)
+            st.caption(ev.get("note", ""))
+
+        # CV scores
+        cv = eval_data.get("cross_validation", {})
+        if cv:
+            st.markdown(f"**Cross-Validation (5-fold):** Mean ROC-AUC = {cv.get('mean_roc_auc', 0):.3f} ± {cv.get('std_roc_auc', 0):.3f}")
+
+        # Best params
+        hp = eval_data.get("hyperparameter_search", {})
+        if hp:
+            st.markdown(f"**Best Hyperparameters:** {hp.get('best_params', {})}")
+
+        # Scaling note
+        st.info(eval_data.get("scaling_note", "").split("\n")[0])
 st.caption(
     "🌱 AgriSense AI — Explainable AI Decision Support for Agricultural Finance | "
     "For demo purposes only | The final lending decision is always made by a human."

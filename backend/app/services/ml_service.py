@@ -124,8 +124,11 @@ def _to_float(val) -> float:
     return float(val)
 
 
-def _train_from_database(db, farmer_count: int) -> tuple:
-    """Train models using data from all farmers in the database."""
+def _train_from_database(db, farmer_count: int, use_full_pipeline: bool = False) -> tuple:
+    """Train models using data from all farmers in the database.
+    
+    If use_full_pipeline=True, uses cross-validation, grid search, and full evaluation.
+    """
     from ..models import Farmer, FinancialRecord, ExistingLoan, OperationalData
     from .financial_analysis import calculate_financial_ratios
 
@@ -215,7 +218,17 @@ def _train_from_database(db, farmer_count: int) -> tuple:
 
     logger.info(f"Training on {len(X)} samples from database")
 
-    return _fit_and_save_models(X, y_risk, y_repay, y_capacity)
+    if use_full_pipeline:
+        from .feature_engineering import train_with_validation
+        eval_results = train_with_validation(X, y_risk, y_repay, y_capacity)
+        logger.info(f"Full pipeline evaluation: ROC-AUC={eval_results['evaluation']['risk_classifier']['roc_auc']}")
+        # Models already saved by train_with_validation
+        risk_model = joblib.load(MODEL_DIR / "credit_risk_model.pkl")
+        repay_model = joblib.load(MODEL_DIR / "repayment_model.pkl")
+        cap_model = joblib.load(MODEL_DIR / "debt_capacity_model.pkl")
+        return risk_model, repay_model, cap_model
+    else:
+        return _fit_and_save_models(X, y_risk, y_repay, y_capacity)
 
 
 def _train_from_synthetic() -> tuple:

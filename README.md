@@ -220,6 +220,39 @@ Simulate "what-if" scenarios:
 ### 📝 AI Decision Memo
 Gemini AI generates structured memos summarizing financial position, risks, model predictions, and supporting evidence. **The final lending decision is always human.**
 
+### 🔬 Data Quality & ML Engineering Pipeline
+
+The full preprocessing and ML pipeline runs before any prediction:
+
+| Step | Method | Design Rationale |
+|---|---|---|
+| **1. Validation** | Rule-based checks (min/max bounds) | Rejects impossible values (e.g., negative revenue, 80% interest rate) |
+| **2. Missing Values** | Strategy varies by data type | Median imputation for financials, mode for operational, API backfill for weather |
+| **3. Duplicates** | Hash-based key detection | Prevents double-counting financial records |
+| **4. Outliers** | IQR method — **flag only** | Never auto-removes. Banks need manual review of anomalies |
+| **5. Standardization** | Currency, unit, date conversion | SEK/EUR/USD → SEK, acres → hectares, ISO dates |
+| **6. Ambiguity** | Cross-document field comparison | Conflicting revenue across documents → flagged for review |
+| **7. Feature Engineering** | 15 derived features | Debt Ratio, Revenue/Ha, Rainfall Deviation, Repayment Ratio, etc. |
+| **8. Scaling** | **Intentionally skipped** | Random Forest is scale-invariant (tree-based). Documented choice |
+| **9. Encoding** | Label Encoding | Preferred for tree models. OneHot would increase dimensionality |
+| **10. Train/Test** | 80/20 stratified split | Maintains class balance in both sets |
+| **11. Cross-Validation** | 5-fold StratifiedKFold | More robust than single split. Reports mean ± std |
+| **12. Hyperparameters** | GridSearchCV | Searches n_estimators, max_depth, min_samples_split |
+| **13. Evaluation** | Precision, Recall, F1, ROC-AUC, Confusion Matrix | FP = lost business. FN = default risk. Optimized for recall |
+
+> **Why Random Forest doesn't need scaling**: Tree-based models split on individual feature thresholds independent of scale. Unlike SVM, neural networks, or linear models, RF handles raw SEK values and ratios (0-1) simultaneously without normalization.
+
+### 🛡️ Data Engineering for Real-World Deployment
+
+Current demo uses synthetic data. For production:
+
+- **Missing financials**: Median imputation by farm size bracket — preserves distribution per cohort
+- **Missing weather**: API backfill from SMHI/OpenWeatherMap with fallback to 5-year regional average
+- **Conflicting documents**: Revenue mismatch >10% across documents = automatic flag for manual review
+- **Invalid values**: Rejected at validation boundary — never silently corrected
+- **Pipeline consistency**: Same preprocessing used during training is reused during inference (no train/serve skew)
+- **Feature store**: All 15 features computed deterministically from raw inputs — reproducible predictions
+
 ---
 
 ## 🔮 Future Work

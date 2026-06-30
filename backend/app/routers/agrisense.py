@@ -639,3 +639,137 @@ def get_scenario_comparison(farmer_id: int, scenario_id: int, db: Session = Depe
         "risk_change": scenario.risk_change,
         "recommendation": scenario.recommendation,
     }
+
+
+# ---------------------------------------------------------------------------
+# Data Quality & Preprocessing
+# ---------------------------------------------------------------------------
+@router.get("/farmers/{farmer_id}/data-quality")
+def get_data_quality_report(farmer_id: int, db: Session = Depends(get_db)):
+    """Run the full preprocessing pipeline and return a data quality report."""
+    from ..services.preprocessing import run_full_preprocessing
+
+    financials = (
+        db.query(FinancialRecord)
+        .filter(FinancialRecord.farmer_id == farmer_id)
+        .order_by(FinancialRecord.year.desc())
+        .all()
+    )
+    loans = (
+        db.query(ExistingLoan)
+        .filter(ExistingLoan.farmer_id == farmer_id)
+        .all()
+    )
+    ops = (
+        db.query(OperationalData)
+        .filter(OperationalData.farmer_id == farmer_id)
+        .first()
+    )
+
+    if not financials:
+        raise HTTPException(404, "No financial records found")
+
+    report = run_full_preprocessing(
+        farmer_id,
+        [r.__dict__ for r in financials],
+        [l.__dict__ for l in loans],
+        ops.__dict__ if ops else None,
+    )
+    return report
+
+
+@router.get("/data-quality/overview")
+def get_data_quality_overview(limit: int = 100, db: Session = Depends(get_db)):
+    """Aggregated data quality overview across all farmers."""
+    from ..services.preprocessing import run_full_preprocessing
+
+    farmers = db.query(Farmer).order_by(Farmer.id.desc()).limit(limit).all()
+
+    total_issues = 0
+    total_outliers = 0
+    total_duplicates = 0
+    total_missing = 0
+    quality_scores = []
+
+    for f in farmers:
+        financials = (
+            db.query(FinancialRecord)
+            .filter(FinancialRecord.farmer_id == f.id)
+            .order_by(FinancialRecord.year.desc())
+            .all()
+        )
+        if not financials:
+            continue
+        loans = (
+            db.query(ExistingLoan)
+            .filter(ExistingLoan.farmer_id == f.id)
+            .all()
+        )
+        ops = (
+            db.query(OperationalData)
+            .filter(OperationalData.farmer_id == f.id)
+            .first()
+        )
+
+        report = run_full_preprocessing(
+            f.id,
+            [r.__dict__ for r in financials],
+            [l.__dict__ for l in loans],
+            ops.__dict__ if ops else None,
+        )
+        s = report["summary"]
+        total_issues += s["validation_errors"] + s["missing_values"] + s["duplicates"]
+        total_outliers += s["outliers"]
+        total_duplicates += s["duplicates"]
+        total_missing += s["missing_values"]
+        quality_scores.append(s["data_quality_score"])
+
+    n = len(quality_scores)
+    return {
+        "farmers_analyzed": n,
+        "total_validation_issues": total_issues,
+        "total_outliers": total_outliers,
+        "total_duplicates": total_duplicates,
+        "total_missing_values": total_missing,
+        "average_quality_score": round(sum(quality_scores) / max(n, 1), 1) if n > 0 else 0,
+        "quality_distribution": {
+            "excellent_90plus": sum(1 for s in quality_scores if s >= 90),
+            "good_70_89": sum(1 for s in quality_scores if 70 <= s < 90),
+            "fair_50_69": sum(1 for s in quality_scores if 50 <= s < 70),
+            "poor_below_50": sum(1 for s in quality_scores if s < 50),
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
+# ML Evaluation
+# ---------------------------------------------------------------------------
+@router.get("/ml/evaluation")
+def get_ml_evaluation():
+    """Get the latest ML model evaluation metrics."""
+    from ..services.feature_engineering import get_latest_evaluation
+
+    eval_data = get_latest_evaluation()
+    if not eval_data:
+        raise HTTPException(404, "No evaluation data found. Run training first.")
+
+    return eval_data
+
+
+@router.post("/ml/retrain")
+def retrain_models(db: Session = Depends(get_db)):
+    """Retrain ML models with full pipeline (CV, grid search, evaluation)."""
+    from ..services.ml_service import _train_from_database, _fit_and_save_models
+
+    farmer_count = db.query(Farmer).count()
+    if farmer_count < 10:
+        raise HTTPException(400, f"Need at least 10 farmers, found {farmer_count}")
+
+    logger.info(f"Retraining models on {farmer_count} farmers with full pipeline...")
+    risk_model, repay_model, cap_model = _train_from_database(db, farmer_count, use_full_pipeline=True)
+
+    return {
+        "status": "retrained",
+        "farmers_used": farmer_count,
+        "message": "Models retrained with cross-validation, grid search, and full evaluation",
+    }
