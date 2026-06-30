@@ -509,3 +509,133 @@ async def get_full_profile(farmer_id: int, db: Session = Depends(get_db)):
                      for k, v in latest_memo.__dict__.items()
                      if not k.startswith("_")} if latest_memo else None,
     )
+
+
+# ---------------------------------------------------------------------------
+# Bank Officer — Applications Overview
+# ---------------------------------------------------------------------------
+@router.get("/bank/applications")
+def get_bank_applications(limit: int = 20, db: Session = Depends(get_db)):
+    """Bank officer view: list of farmers with risk status."""
+    farmers = db.query(Farmer).order_by(Farmer.id.desc()).limit(limit).all()
+
+    applications = []
+    for f in farmers:
+        latest_pred = (
+            db.query(Prediction)
+            .filter(Prediction.farmer_id == f.id)
+            .order_by(Prediction.created_at.desc())
+            .first()
+        )
+        ops = (
+            db.query(OperationalData)
+            .filter(OperationalData.farmer_id == f.id)
+            .first()
+        )
+
+        risk = latest_pred.overall_financing_risk if latest_pred else "unknown"
+        score = latest_pred.credit_risk_score if latest_pred else None
+
+        if risk == "low":
+            status = "Ready for Review"
+        elif risk == "medium":
+            status = "Under Review"
+        elif risk == "high":
+            status = "Manual Review Required"
+        else:
+            status = "Pending Assessment"
+
+        applications.append({
+            "id": f.id,
+            "name": f.full_name,
+            "state": f.state,
+            "district": f.district,
+            "crop": ops.crop_type if ops else "N/A",
+            "farm_size_ha": ops.farm_size_acres if ops else 0,
+            "risk_level": risk,
+            "risk_score": round(score, 2) if score else None,
+            "status": status,
+            "uc_score": f.cibil_score,
+        })
+
+    return {
+        "total": db.query(Farmer).count(),
+        "applications": applications,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Environmental Risk Score
+# ---------------------------------------------------------------------------
+@router.get("/environmental-score")
+async def get_environmental_score():
+    """Get composite environmental risk score (0-100)."""
+    from ..services.environmental_score import calculate_environmental_score
+    from ..services.external_data import get_all_external_data
+
+    external = await get_all_external_data()
+    score = calculate_environmental_score(
+        external["weather"],
+        external["commodity"],
+        external["fuel"],
+    )
+    return score
+
+
+# ---------------------------------------------------------------------------
+# Scenario Comparison (Before vs After)
+# ---------------------------------------------------------------------------
+@router.get("/farmers/{farmer_id}/scenario-comparison/{scenario_id}")
+def get_scenario_comparison(farmer_id: int, scenario_id: int, db: Session = Depends(get_db)):
+    """Compare baseline ratios vs scenario outcome."""
+    scenario = db.get(ScenarioResult, scenario_id)
+    if not scenario or scenario.farmer_id != farmer_id:
+        raise HTTPException(404, "Scenario not found")
+
+    # Get current baseline
+    latest_pred = (
+        db.query(Prediction)
+        .filter(Prediction.farmer_id == farmer_id)
+        .order_by(Prediction.created_at.desc())
+        .first()
+    )
+
+    financials = (
+        db.query(FinancialRecord)
+        .filter(FinancialRecord.farmer_id == farmer_id)
+        .order_by(FinancialRecord.year.desc())
+        .all()
+    )
+    loans = (
+        db.query(ExistingLoan)
+        .filter(ExistingLoan.farmer_id == farmer_id)
+        .all()
+    )
+
+    current_ratios = calculate_financial_ratios(
+        [r.__dict__ for r in financials],
+        [l.__dict__ for l in loans],
+    ) if financials else {}
+
+    return {
+        "scenario_name": scenario.scenario_name,
+        "scenario_type": scenario.scenario_type,
+        "current": {
+            "debt_to_income": current_ratios.get("debt_to_income"),
+            "dscr": current_ratios.get("dscr"),
+            "credit_risk": latest_pred.credit_risk_score if latest_pred else None,
+            "repayment_probability": latest_pred.repayment_probability if latest_pred else None,
+            "debt_capacity": latest_pred.debt_capacity if latest_pred else None,
+            "overall_risk": latest_pred.overall_financing_risk if latest_pred else "N/A",
+        },
+        "scenario": {
+            "debt_to_income": scenario.new_debt_to_income,
+            "dscr": scenario.new_dscr,
+            "credit_risk": scenario.new_credit_risk,
+            "repayment_probability": scenario.new_repayment_probability,
+            "debt_capacity": scenario.new_debt_capacity,
+            "overall_risk": scenario.risk_change,
+        },
+        "risk_change": scenario.risk_change,
+        "recommendation": scenario.recommendation,
+    }

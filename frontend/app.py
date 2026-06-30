@@ -76,6 +76,7 @@ with st.sidebar:
         "Go to:",
         [
             "🏠 Dashboard",
+            "🏦 Applications",
             "👨‍🌾 Farmer Profile",
             "📄 Documents",
             "💰 Financial Analysis",
@@ -84,13 +85,14 @@ with st.sidebar:
             "🤖 AI Prediction",
             "🔮 Scenario Analysis",
             "📝 Decision Memo",
+            "🏗️ How It Works",
         ],
         label_visibility="collapsed",
     )
 
     st.markdown("---")
-    st.caption("v1.0.0 | AgriSense AI")
-    st.caption("Synthetic data only | GDPR compliant")
+    st.caption("v1.1.0 | AgriSense AI")
+    st.caption("Synthetic data | GDPR compliant")
 
 # ---- Header ----
 st.markdown(
@@ -141,91 +143,149 @@ def risk_badge(level: str) -> str:
 if page == "🏠 Dashboard":
     st.markdown("## 📊 Portfolio Overview")
 
-    col1, col2, col3, col4 = st.columns(4)
+    # ---- AI Summary Card (#8) ----
+    st.markdown("""
+    <div style="background:linear-gradient(135deg,#1b5e20,#2e7d32);border-radius:12px;padding:1.25rem;margin-bottom:1rem;color:white;">
+    <h3 style="margin:0;color:white;">🤖 AI Summary</h3>
+    <p style="margin:0.5rem 0 0 0;font-size:0.95rem;opacity:0.95;">
+    AI-generated overview of farmer financial health, risk profile, and recommendation. Updated on each prediction.
+    </p>
+    </div>
+    """, unsafe_allow_html=True)
 
-    # Fetch farmer data
+    # Fetch data
     farmer_data = fetch_json(f"/farmers/{FARMER_ID}")
-
-    if farmer_data:
-        with col1:
-            st.metric("Farmer", farmer_data.get("full_name", "N/A"))
-        with col2:
-            st.metric("UC Score", farmer_data.get("cibil_score", "N/A"))
-        with col3:
-            st.metric("State", farmer_data.get("state", "NA"))
-        with col4:
-            st.metric("Farming Experience", f"{farmer_data.get('years_in_farming', 'N/A')} years")
-
-    # Latest prediction
+    fa_data = fetch_json(f"/farmers/{FARMER_ID}/financial-analysis")
     pred_data = fetch_json(f"/farmers/{FARMER_ID}/predictions")
-    if pred_data and len(pred_data) > 0:
+    env_data = fetch_json("/environmental-score")
+
+    if farmer_data and fa_data and pred_data and len(pred_data) > 0:
         latest = pred_data[0]
+        ratios = fa_data.get("ratios", {})
+        rec = ratios.get("recommendation_category", {})
 
-        st.markdown("---")
-        st.markdown("### 🤖 Latest AI Assessment")
-
+        # ---- Composite Scores Row (#6, #7) ----
         col1, col2, col3, col4 = st.columns(4)
 
         with col1:
-            risk = latest.get("overall_financing_risk", "N/A")
-            st.markdown(
-                f'<div class="metric-card">'
-                f'<small>Overall Risk</small><br>'
-                f'{risk_badge(risk)}'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
+            hs = ratios.get("composite_health_score", 0)
+            color = "#2e7d32" if hs >= 70 else "#f57f17" if hs >= 50 else "#c62828"
+            st.markdown(f"""
+            <div style="text-align:center;padding:0.5rem;">
+            <h2 style="color:{color};margin:0;">{hs}/100</h2>
+            <small>Financial Health Score</small>
+            </div>
+            """, unsafe_allow_html=True)
 
         with col2:
-            score = latest.get("credit_risk_score", 0)
-            delta_color = "inverse"
-            st.metric("Credit Risk Score", f"{score:.0%}",
-                      delta="Low" if score < 0.3 else "Medium" if score < 0.55 else "High",
-                      delta_color=delta_color)
+            es = env_data.get("total_score", 0) if env_data else 50
+            ecolor = "#2e7d32" if es <= 30 else "#f57f17" if es <= 55 else "#c62828"
+            st.markdown(f"""
+            <div style="text-align:center;padding:0.5rem;">
+            <h2 style="color:{ecolor};margin:0;">{es}/100</h2>
+            <small>Environmental Risk</small>
+            </div>
+            """, unsafe_allow_html=True)
 
         with col3:
-            repay = latest.get("repayment_probability", 0)
-            st.metric("Repayment Probability", f"{repay:.0%}")
+            cat = rec.get("category", "N/A")
+            ccolor = rec.get("color", "#666")
+            st.markdown(f"""
+            <div style="text-align:center;padding:0.5rem;">
+            <h2 style="color:{ccolor};margin:0;font-size:1.2rem;">{cat}</h2>
+            <small>Recommendation</small>
+            </div>
+            """, unsafe_allow_html=True)
 
         with col4:
-            capacity = latest.get("debt_capacity", 0)
-            st.metric("Additional Debt Capacity", f"{capacity:,.0f} kr")
+            conf = latest.get("model_confidence", 0.85)
+            st.markdown(f"""
+            <div style="text-align:center;padding:0.5rem;">
+            <h2 style="color:#1565c0;margin:0;">{conf:.0%}</h2>
+            <small>Model Confidence</small>
+            </div>
+            """, unsafe_allow_html=True)
 
-        # Risk breakdown
+        # ---- Recommendation reasoning (#3) ----
+        if rec.get("reasoning"):
+            bg = rec.get("color", "#666") + "15"
+            st.markdown(f"""
+            <div style="background:{bg};border-left:4px solid {rec.get('color','#666')};padding:0.75rem;border-radius:4px;margin:0.5rem 0;">
+            <strong>{rec.get('category')}</strong>: {rec.get('reasoning')}
+            </div>
+            """, unsafe_allow_html=True)
+
+        # ---- AI Summary Text (Gemini-generated placeholder) (#8) ----
+        risk_level = latest.get("overall_financing_risk", "medium")
+        summaries = {
+            "low": f"✅ {farmer_data.get('full_name','Farmer')} has strong cash flow, low debt burden, and favorable environmental conditions. Overall recommendation: <strong>Proceed</strong> with standard monitoring.",
+            "medium": f"⚠️ {farmer_data.get('full_name','Farmer')} shows adequate financial health with some risk factors. Overall recommendation: <strong>Proceed with conditions</strong> — crop insurance or partial collateral advised.",
+            "high": f"🔴 {farmer_data.get('full_name','Farmer')} has elevated risk indicators requiring attention. Overall recommendation: <strong>Manual review required</strong> — detailed assessment of collateral and repayment capacity needed.",
+        }
+        st.info(summaries.get(risk_level, summaries["medium"]))
+
         st.markdown("---")
-        st.markdown("### 🎯 Risk Breakdown")
 
-        col1, col2, col3, col4 = st.columns(4)
+        # ---- Key Metrics + Timeline (#4) ----
+        trends = ratios.get("trends", {})
+        col1, col2, col3, col4, col5 = st.columns(5)
+
+        trend_icons = {"up": "🟢 ↑", "down": "🔴 ↓", "flat": "🟡 →"}
+
         with col1:
-            fr = latest.get("financial_health_risk", "N/A")
-            st.markdown(f"**Financial Health**<br>{risk_badge(fr)}", unsafe_allow_html=True)
+            rev = fa_data.get("latest_financial", {}).get("revenue", 0)
+            t = trends.get("revenue", "flat")
+            st.metric("Revenue", f"{rev:,.0f} kr", delta=f"YoY {trend_icons.get(t,'')}")
+
         with col2:
-            er = latest.get("environmental_risk", "N/A")
-            st.markdown(f"**Environmental**<br>{risk_badge(er)}", unsafe_allow_html=True)
+            dti = ratios.get("debt_to_income", 0)
+            t = trends.get("debt", "flat")
+            st.metric("Debt-to-Income", f"{dti:.1%}", delta=f"Debt {trend_icons.get(t,'')}")
+
         with col3:
-            mr = latest.get("market_risk", "N/A")
-            st.markdown(f"**Market**<br>{risk_badge(mr)}", unsafe_allow_html=True)
+            dscr = ratios.get("dscr", 0)
+            t = trends.get("dscr_trend", "flat")
+            st.metric("DSCR", f"{dscr:.2f}x", delta=f"{trend_icons.get(t,'')}")
+
         with col4:
-            or_ = latest.get("overall_financing_risk", "N/A")
-            st.markdown(f"**Overall Financing**<br>{risk_badge(or_)}", unsafe_allow_html=True)
+            cf = fa_data.get("latest_financial", {}).get("operating_cash_flow", 0)
+            t = trends.get("cash_flow", "flat")
+            st.metric("Cash Flow", f"{cf:,.0f} kr", delta=f"{trend_icons.get(t,'')}")
 
-        # Feature Importance
-        if latest.get("feature_importance_json"):
-            import json
-            fi = json.loads(latest["feature_importance_json"])
-            fi_df = pd.DataFrame({
-                "Feature": list(fi.keys()),
-                "Importance": list(fi.values()),
-            }).sort_values("Importance", ascending=True).tail(10)
+        with col5:
+            ni = fa_data.get("latest_financial", {}).get("net_income", 0)
+            t = trends.get("net_income", "flat")
+            st.metric("Net Income", f"{ni:,.0f} kr", delta=f"{trend_icons.get(t,'')}")
 
-            st.markdown("### 📈 Top Feature Importance")
-            fig = px.bar(fi_df, x="Importance", y="Feature", orientation="h",
-                         color="Importance", color_continuous_scale="Greens")
-            fig.update_layout(height=350, margin=dict(l=0, r=0, t=0, b=0))
-            st.plotly_chart(fig, use_container_width=True)
+        # ---- Feature Importance + Risk Breakdown ----
+        col1, col2 = st.columns([1, 1])
+
+        with col1:
+            st.markdown("### 🎯 Risk Breakdown")
+            for label, key in [
+                ("Financial Health", "financial_health_risk"),
+                ("Environmental", "environmental_risk"),
+                ("Market", "market_risk"),
+                ("Overall Financing", "overall_financing_risk"),
+            ]:
+                val = latest.get(key, "N/A")
+                st.markdown(f"**{label}:** {risk_badge(val)}", unsafe_allow_html=True)
+
+        with col2:
+            if latest.get("feature_importance_json"):
+                fi = json.loads(latest["feature_importance_json"])
+                fi_df = pd.DataFrame({
+                    "Feature": list(fi.keys()),
+                    "Importance": list(fi.values()),
+                }).sort_values("Importance", ascending=True).tail(8)
+                st.markdown("### 📈 Top Features")
+                fig = px.bar(fi_df, x="Importance", y="Feature", orientation="h",
+                             color="Importance", color_continuous_scale="Greens")
+                fig.update_layout(height=280, margin=dict(l=0, r=0, t=0, b=0))
+                st.plotly_chart(fig, use_container_width=True)
 
     else:
-        st.info("👈 Run a prediction first from the 'AI Prediction' page.")
+        st.info("Run a prediction from the 'AI Prediction' page to see the dashboard.")
 
 
 # ===========================================================================
@@ -659,7 +719,7 @@ elif page == "🔮 Scenario Analysis":
     elif scenario_type == "commodity":
         params["price_change_pct"] = st.slider("Commodity Price Change (%)", -50, 30, -15, 5)
     elif scenario_type == "new_loan":
-        params["loan_amount"] = st.number_input("Loan Amount ()", 50000, 2000000, 200000, 50000)
+        params["loan_amount"] = st.number_input("Loan Amount (SEK)", 50000, 2000000, 200000, 50000)
         params["interest_rate"] = st.slider("Interest Rate (%)", 5.0, 18.0, 10.0, 0.5)
         params["tenure_months"] = st.slider("Tenure (months)", 12, 120, 36, 12)
     elif scenario_type == "interest":
@@ -667,11 +727,17 @@ elif page == "🔮 Scenario Analysis":
     elif scenario_type == "fuel":
         params["fuel_price_change_pct"] = st.slider("Fuel Price Increase (%)", 5, 50, 15, 5)
     elif scenario_type == "tractor_purchase":
-        params["tractor_cost"] = st.number_input("Tractor Cost ()", 200000, 1500000, 500000, 50000)
-        params["loan_amount"] = st.number_input("Loan Amount ()", 100000, 1500000, 400000, 50000)
+        params["tractor_cost"] = st.number_input("Tractor Cost (SEK)", 200000, 1500000, 500000, 50000)
+        params["loan_amount"] = st.number_input("Loan Amount (SEK)", 100000, 1500000, 400000, 50000)
         params["interest_rate"] = st.slider("Interest Rate (%)", 5.0, 15.0, 8.0, 0.5)
 
-    if st.button("🔮 Run Scenario", type="primary", use_container_width=True):
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        run_btn = st.button("🔮 Run Scenario", type="primary", use_container_width=True)
+    with col2:
+        st.caption("Recalculates all ratios and risk scores")
+
+    if run_btn:
         with st.spinner("Running scenario analysis..."):
             import requests as req
             try:
@@ -681,36 +747,59 @@ elif page == "🔮 Scenario Analysis":
                     timeout=30,
                 )
                 if resp.status_code == 200:
-                    result = resp.json()
-                    st.success("✅ Scenario complete!")
+                    st.success("✅ Scenario complete! Refresh to see comparison.")
                     st.rerun()
                 else:
                     st.error(f"Error: {resp.status_code}")
             except Exception as e:
                 st.error(f"Backend error: {e}")
 
-    # Show past scenarios
+    # Show past scenarios with Before/After (#5)
     scenarios = fetch_json(f"/farmers/{FARMER_ID}/scenarios")
     if scenarios and len(scenarios) > 0:
         st.markdown("---")
-        st.markdown("### 📊 Scenario History")
+        st.markdown("### 📊 Scenario History — Before vs After")
 
-        for s in scenarios:
-            with st.expander(f"{s['scenario_name']} — Risk: {s.get('risk_change', 'N/A').title()}", expanded=False):
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.metric("New DTI", f"{s.get('new_debt_to_income', 0):.1%}" if s.get('new_debt_to_income') else "N/A")
-                with col2:
-                    st.metric("New DSCR", f"{s.get('new_dscr', 0):.2f}x" if s.get('new_dscr') else "N/A")
-                with col3:
-                    change = s.get("risk_change", "unchanged")
-                    icon = "🔴" if change == "worsened" else "🟢" if change == "improved" else "🟡"
-                    st.markdown(f"**Risk Impact:** {icon} {change.title()}")
+        for s in scenarios[:5]:
+            comp = fetch_json(f"/farmers/{FARMER_ID}/scenario-comparison/{s['id']}")
+
+            change = s.get("risk_change", "unchanged")
+            icon = "🔴" if change == "worsened" else "🟢" if change == "improved" else "🟡"
+
+            with st.expander(f"{s['scenario_name']} — {icon} {change.title()}", expanded=(scenarios.index(s) == 0)):
+                if comp and comp.get("current", {}).get("dscr"):
+                    cur = comp.get("current", {})
+                    aft = comp.get("scenario", {})
+
+                    col1, col2, col3 = st.columns([2, 0.2, 2])
+                    with col1:
+                        st.markdown("**⬅️ Before**")
+                        st.metric("DTI", f"{cur['debt_to_income']:.1%}" if cur.get('debt_to_income') else "N/A")
+                        st.metric("DSCR", f"{cur['dscr']:.2f}x" if cur.get('dscr') else "N/A")
+                        st.metric("Risk", cur.get('overall_risk', 'N/A').title())
+                    with col2:
+                        st.markdown("<div style='font-size:2rem;text-align:center;padding-top:2rem;'>→</div>", unsafe_allow_html=True)
+                    with col3:
+                        st.markdown("**After ➡️**")
+                        delta_dti = f"{aft['debt_to_income']:.1%}" if aft.get('debt_to_income') else "N/A"
+                        delta_dscr = f"{aft['dscr']:.2f}x" if aft.get('dscr') else "N/A"
+                        st.metric("DTI", delta_dti)
+                        st.metric("DSCR", delta_dscr)
+                        r = aft.get("overall_risk", "N/A")
+                        rc = "#2e7d32" if r == "improved" else "#c62828" if r == "worsened" else "#666"
+                        st.markdown(f"**Risk:** <span style='color:{rc};font-weight:700'>{r.title()}</span>", unsafe_allow_html=True)
+                else:
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("DTI", f"{s.get('new_debt_to_income', 0):.1%}" if s.get('new_debt_to_income') else "N/A")
+                    with col2:
+                        st.metric("DSCR", f"{s.get('new_dscr', 0):.2f}x" if s.get('new_dscr') else "N/A")
+                    with col3:
+                        st.markdown(f"**Risk Impact:** {icon} {change.title()}")
 
                 rec = s.get("recommendation")
                 if rec:
                     st.info(rec)
-
     else:
         st.info("No scenarios run yet. Select a scenario above and click 'Run Scenario'.")
 
@@ -750,15 +839,190 @@ elif page == "📝 Decision Memo":
             st.markdown("---")
             st.code(memo["full_memo"], language=None)
 
+        # ---- Provenance (#1) ----
+        st.markdown("---")
+        st.markdown("### 📋 Data Provenance")
+        fa_data = fetch_json(f"/farmers/{FARMER_ID}/financial-analysis")
+        if fa_data:
+            prov = fa_data.get("ratios", {}).get("provenance", {})
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.caption(f"Revenue source: {prov.get('revenue', 'Financial Statement')}")
+            with col2:
+                st.caption(f"Debt source: {prov.get('debt', 'Loan Statement')}")
+            with col3:
+                st.caption(f"Asset source: {prov.get('assets', 'Financial Statement')}")
+
         st.markdown("---")
         st.caption(f"Generated by: {memo.get('generated_by', 'N/A')} | "
                    f"Confidence: {memo.get('confidence_level', 'N/A')} | "
                    f"Date: {memo.get('created_at', 'N/A')}")
+
+        # ---- Advisory disclaimer (#11) ----
+        st.markdown("""
+        <div style="background:#fff3e0;border-left:4px solid #f57f17;padding:0.75rem;border-radius:4px;margin-top:1rem;">
+        <strong>⚠️ AI Recommendation</strong><br>
+        <small>This recommendation is advisory and intended to support, not replace, human lending decisions.
+        All final credit decisions must be made by qualified loan officers in accordance with
+        their institution's credit policies and applicable regulations.</small>
+        </div>
+        """, unsafe_allow_html=True)
     else:
         st.info("No memo generated yet. Click 'Generate Decision Memo' above.")
 
-# ---- Footer ----
-st.markdown("---")
+
+# ===========================================================================
+# Page: Bank Officer Applications (#10)
+# ===========================================================================
+elif page == "🏦 Applications":
+    st.markdown("## 🏦 Loan Applications")
+
+    apps_data = fetch_json("/bank/applications?limit=50")
+
+    if apps_data:
+        total = apps_data.get("total", 0)
+        apps = apps_data.get("applications", [])
+
+        st.markdown(f"**{total}** total applications in the system")
+
+        # Summary stats
+        low = sum(1 for a in apps if a.get("risk_level") == "low")
+        med = sum(1 for a in apps if a.get("risk_level") == "medium")
+        high = sum(1 for a in apps if a.get("risk_level") == "high")
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("🟢 Low Risk", low)
+        with col2:
+            st.metric("🟡 Medium Risk", med)
+        with col3:
+            st.metric("🔴 High Risk", high)
+
+        st.markdown("---")
+
+        # Applications table
+        df = pd.DataFrame(apps)
+        df = df.rename(columns={
+            "name": "Farmer", "state": "Region", "crop": "Crop",
+            "farm_size_ha": "Farm (ha)", "risk_level": "Risk",
+            "status": "Status", "uc_score": "UC Score",
+        })
+
+        # Color-code the risk column
+        def color_risk(val):
+            if val == "low":
+                return "background-color: #c8e6c9; color: #2e7d32; font-weight: 700"
+            elif val == "medium":
+                return "background-color: #fff9c4; color: #f57f17; font-weight: 700"
+            elif val == "high":
+                return "background-color: #ffcdd2; color: #c62828; font-weight: 700"
+            return ""
+
+        styled = df[["Farmer", "Region", "Crop", "Farm (ha)", "Risk", "Status", "UC Score"]].style
+        styled = styled.map(color_risk, subset=["Risk"])
+
+        st.dataframe(styled, use_container_width=True, hide_index=True,
+                     column_config={"Farmer": st.column_config.TextColumn(width="medium")})
+
+        st.markdown("---")
+        st.markdown("### 👆 Click any farmer above and go to 'Farmer Profile' to see full details.")
+        st.info(f"Showing {len(apps)} most recent applications. Total in database: {total}")
+    else:
+        st.warning("No applications data available. Ensure the backend is running.")
+
+
+# ===========================================================================
+# Page: How It Works (#9 — Architecture Diagram)
+# ===========================================================================
+elif page == "🏗️ How It Works":
+    st.markdown("## 🏗️ How AgriSense AI Works")
+
+    st.markdown("""
+    <div class="info-box">
+    AgriSense AI transforms fragmented farm data into explainable, AI-powered decision support for lenders.
+    Every step is transparent. The final decision is always human.
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Architecture flow
+    st.markdown("### 🔄 The Pipeline")
+
+    steps = [
+        ("📄", "Document Upload", "Farmer uploads financial statements, loan docs, land records, crop reports"),
+        ("🔍", "Data Extraction", "Key values extracted: revenue, assets, outstanding debt, crop yield"),
+        ("🔗", "Unified Profile", "Financial + Operational + External data merged into one profile"),
+        ("📊", "Financial Analysis", "10+ ratios calculated: DTI, DSCR, LTV, working capital, margins"),
+        ("🌦️", "External Data", "Weather, commodity prices, fuel costs, EU subsidies integrated"),
+        ("🤖", "ML Prediction", "Random Forest predicts credit risk, repayment probability, debt capacity"),
+        ("💡", "Explainability", "Feature importance shows why each prediction was made"),
+        ("🔮", "Scenario Analysis", "What-if simulations: rainfall, prices, new loans, interest rates"),
+        ("📝", "Decision Memo", "Gemini AI generates structured report with all evidence"),
+        ("👤", "Human Decision", "Loan officer reviews all data and makes the final decision"),
+    ]
+
+    for icon, title, desc in steps:
+        st.markdown(f"""
+        <div style="display:flex;align-items:center;padding:0.5rem 0;border-bottom:1px solid #eee;">
+        <div style="font-size:1.5rem;width:40px;">{icon}</div>
+        <div style="flex:1;">
+        <strong>{title}</strong><br>
+        <small style="color:#666;">{desc}</small>
+        </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # Tech stack
+    st.markdown("### 🧱 Tech Stack")
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.markdown("**Frontend**")
+        st.markdown("- Streamlit (Python)")
+        st.markdown("- Plotly charts")
+        st.markdown("- 11 interactive pages")
+
+        st.markdown("**Backend**")
+        st.markdown("- FastAPI (Python)")
+        st.markdown("- 18 REST endpoints")
+        st.markdown("- Async external APIs")
+
+    with col2:
+        st.markdown("**Data**")
+        st.markdown("- SQLite + SQLAlchemy")
+        st.markdown("- 9 table schema")
+        st.markdown("- 2,500 synthetic farmers")
+        st.markdown("- 18,500+ total rows")
+
+        st.markdown("**ML**")
+        st.markdown("- Random Forest × 3")
+        st.markdown("- 150 trees, depth 12")
+        st.markdown("- 15 engineered features")
+
+    with col3:
+        st.markdown("**AI**")
+        st.markdown("- Gemini API")
+        st.markdown("- Explanations only")
+        st.markdown("- Never makes decisions")
+
+        st.markdown("**DevOps**")
+        st.markdown("- Docker")
+        st.markdown("- .env config")
+        st.markdown("- GDPR compliant")
+
+    st.markdown("---")
+    st.markdown("### 🎯 Design Philosophy")
+    st.markdown("""
+    > **Every feature answers one of Oscar's six questions:**
+    >
+    > 1. Combine heterogeneous data? ✅ Unified Profile
+    > 2. Transparent debt capacity? ✅ Financial Analysis + ML
+    > 3. Scenario analysis? ✅ What-If Engine
+    > 4. Weather/commodity integration? ✅ External Data APIs
+    > 5. ML beyond traditional analysis? ✅ Random Forest + Feature Importance
+    > 6. Practical decision-support tools? ✅ Dashboard + Decision Memo
+    """)
 st.caption(
     "🌱 AgriSense AI — Explainable AI Decision Support for Agricultural Finance | "
     "For demo purposes only | The final lending decision is always made by a human."

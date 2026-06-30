@@ -134,7 +134,137 @@ def calculate_financial_ratios(
         else "critical"
     )
 
+    # --- Composite Financial Health Score (0-100) ---
+    health_score = _calculate_health_score(
+        debt_to_income, dscr, operating_margin, loan_to_value,
+        current_ratio, asset_coverage, debt_to_equity, cash_flow_margin,
+    )
+    ratios["composite_health_score"] = health_score
+
+    # --- Trend indicators (year-over-year) ---
+    if len(financial_records) >= 2:
+        prev = financial_records[1]  # second most recent
+        ratios["trends"] = {
+            "revenue": _trend(prev.get("revenue", 0), revenue),
+            "net_income": _trend(prev.get("net_income", 0), net_income),
+            "debt": _trend_inverse(prev.get("total_liabilities", total_liabilities), total_liabilities),
+            "cash_flow": _trend(prev.get("operating_cash_flow", 0), operating_cash_flow),
+            "dscr_trend": _trend(
+                prev_dscr if (prev_dscr := _calc_dscr_for_year(prev, existing_loans)) else dscr,
+                dscr,
+            ),
+        }
+    else:
+        ratios["trends"] = {}
+
+    # --- Recommendation Category ---
+    ratios["recommendation_category"] = _recommendation_category(health_score, flags, dscr, debt_to_income)
+
+    # --- Provenance summary ---
+    ratios["provenance"] = {
+        "revenue": latest.get("source_document", "Financial Statement"),
+        "debt": existing_loans[0].get("loan_type", "Loan Statement") if existing_loans else "N/A",
+        "assets": latest.get("source_document", "Financial Statement"),
+    }
+
     logger.info(f"Financial ratios calculated for year {latest.get('year')}: "
-                f"DTI={debt_to_income:.2%}, DSCR={dscr:.2f}x, health={ratios['overall_financial_health']}")
+                f"DTI={debt_to_income:.2%}, DSCR={dscr:.2f}x, "
+                f"Health={ratios['overall_financial_health']}, Score={health_score}/100")
 
     return ratios
+
+
+def _trend(prev_val: float, curr_val: float) -> str:
+    """Determine trend direction."""
+    if curr_val > prev_val * 1.03:
+        return "up"
+    elif curr_val < prev_val * 0.97:
+        return "down"
+    return "flat"
+
+
+def _trend_inverse(prev_val: float, curr_val: float) -> str:
+    """For metrics where lower is better (debt)."""
+    if curr_val > prev_val * 1.03:
+        return "down"  # debt going up is bad = down
+    elif curr_val < prev_val * 0.97:
+        return "up"    # debt going down is good = up
+    return "flat"
+
+
+def _calc_dscr_for_year(financial: dict, loans: list) -> float | None:
+    """Quick DSCR calculation for a single year."""
+    ni = financial.get("net_income", 0)
+    interest = financial.get("interest_expense", 0)
+    depr = financial.get("depreciation", 0)
+    ebitda = ni + interest + depr
+    annual_service = sum(l.get("annual_debt_service", 0) or (l.get("monthly_emi", 0) * 12) for l in loans)
+    if annual_service == 0:
+        return None
+    return ebitda / annual_service
+
+
+def _calculate_health_score(dti, dscr, margin, ltv, current_ratio, asset_cov, debt_eq, cf_margin) -> int:
+    """Composite financial health score 0-100."""
+    score = 50  # baseline
+
+    # DTI: lower is better (0-50% range)
+    if dti <= 0.35: score += 15
+    elif dti <= 0.45: score += 8
+    elif dti <= 0.55: score += 0
+    else: score -= 10
+
+    # DSCR: higher is better
+    if dscr >= 2.0: score += 15
+    elif dscr >= 1.5: score += 10
+    elif dscr >= 1.25: score += 5
+    elif dscr >= 1.0: score -= 5
+    else: score -= 15
+
+    # Operating margin
+    if margin >= 0.35: score += 10
+    elif margin >= 0.20: score += 5
+    elif margin >= 0.10: score += 0
+    else: score -= 5
+
+    # LTV: lower is better
+    if ltv <= 0.30: score += 10
+    elif ltv <= 0.50: score += 5
+    elif ltv <= 0.65: score += 0
+    else: score -= 10
+
+    # Current ratio
+    if current_ratio >= 2.0: score += 5
+    elif current_ratio >= 1.0: score += 2
+    else: score -= 5
+
+    return max(0, min(100, score))
+
+
+def _recommendation_category(score: int, flags: list, dscr: float, dti: float) -> dict:
+    """Generate recommendation category with reasoning."""
+    high_flags = [f for f in flags if f["severity"] == "high"]
+
+    if score >= 75 and len(high_flags) == 0 and dscr >= 1.5:
+        category = "Proceed"
+        color = "#2e7d32"
+        reasoning = "Strong financial position with comfortable debt service coverage and low leverage."
+    elif score >= 55 and len(high_flags) <= 1 and dscr >= 1.25:
+        category = "Proceed with Conditions"
+        color = "#f57f17"
+        reasoning = "Adequate financial health. Conditional approval recommended — consider crop insurance or partial collateral."
+    elif score >= 35 and dscr >= 1.0:
+        category = "Manual Review"
+        color = "#e65100"
+        reasoning = "Mixed signals. DSCR near minimum threshold. Requires detailed human review of collateral and repayment history."
+    else:
+        category = "High Risk"
+        color = "#c62828"
+        reasoning = "Multiple risk indicators suggest elevated default risk. Recommend declining or requesting significant additional collateral."
+
+    return {
+        "category": category,
+        "color": color,
+        "reasoning": reasoning,
+        "score": score,
+    }
