@@ -86,6 +86,7 @@ with st.sidebar:
             "🤖 AI Prediction",
             "� Investment Simulator",
             "📝 Decision Memo",
+            "🧪 Model Evaluation",
             "🏗️ How It Works",
         ],
         label_visibility="collapsed",
@@ -1351,9 +1352,79 @@ elif page == "🏗️ How It Works":
 
 
 # ===========================================================================
-# Page: Data Quality Dashboard
+# Page: Model Evaluation
 # ===========================================================================
-elif page == "📊 Data Quality":
+elif page == "🧪 Model Evaluation":
+    st.markdown("## 🧪 Model Evaluation — Deployment Simulation")
+    st.markdown("""<div class="info-box">Evaluates model on <strong>1,000 unseen farmers</strong> with different seed and shifted distributions.</div>""", unsafe_allow_html=True)
+
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        if st.button("🚀 Run Evaluation (1,000 farmers)", type="primary", use_container_width=True):
+            with st.spinner("Generating 1,000 unseen farmers and running inference... (30-60s)"):
+                try:
+                    resp = requests.post(f"{API_BASE}/ml/evaluate", params={"n_farmers": 1000, "seed": 999}, timeout=120)
+                    if resp.status_code == 200:
+                        st.success(f"✅ {resp.json().get('n_farmers', 0)} farmers evaluated.")
+                        st.rerun()
+                    else:
+                        st.error(f"Error: {resp.status_code}")
+                except Exception as e:
+                    st.error(f"Backend error: {e}")
+    with col2:
+        st.caption("Different seed + shifted distributions from training.")
+
+    eval_resp = fetch_json("/ml/latest-evaluation")
+    if eval_resp:
+        metrics = eval_resp.get("metrics", {})
+        m = metrics.get("metrics", {})
+
+        st.markdown("---")
+        st.markdown(f"### 📊 Overall Performance ({metrics.get('n_farmers_evaluated', 0)} farmers)")
+        col1, col2, col3, col4, col5 = st.columns(5)
+        with col1: st.metric("Accuracy", f"{m.get('accuracy', 0):.1%}")
+        with col2: st.metric("Precision", f"{m.get('precision', 0):.1%}")
+        with col3: st.metric("Recall", f"{m.get('recall', 0):.1%}")
+        with col4: st.metric("F1", f"{m.get('f1_score', 0):.3f}")
+        with col5: st.metric("ROC-AUC", f"{m.get('roc_auc', 0):.3f}")
+        st.caption(m.get("note", ""))
+
+        # Risk distribution
+        risk = metrics.get("risk_distribution", {})
+        risk_df = pd.DataFrame({"Level": ["Low", "Medium", "High"], "Farmers": [risk.get("low",0), risk.get("medium",0), risk.get("high",0)]})
+        fig = px.bar(risk_df, x="Level", y="Farmers", color="Level", color_discrete_map={"Low":"#2e7d32","Medium":"#f57f17","High":"#c62828"})
+        fig.update_layout(height=250, showlegend=False, margin=dict(l=0,r=0,t=0,b=0))
+        st.plotly_chart(fig, use_container_width=True)
+
+        # Calibration
+        cal = metrics.get("calibration", [])
+        if cal:
+            st.markdown("### 🎯 Calibration")
+            cal_df = pd.DataFrame(cal)
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=cal_df["predicted_avg_risk"], y=cal_df["actual_default_rate"], mode="lines+markers", name="Model"))
+            fig.add_trace(go.Scatter(x=[0,1], y=[0,1], mode="lines", name="Perfect", line=dict(color="#999", dash="dash")))
+            fig.update_layout(height=280, xaxis_title="Predicted", yaxis_title="Actual", margin=dict(l=0,r=0,t=10,b=0))
+            st.plotly_chart(fig, use_container_width=True)
+
+        # Misclassifications
+        mis = metrics.get("interesting_misclassifications", [])
+        if mis:
+            st.markdown("### 🔍 Interesting Misclassifications")
+            st.dataframe(pd.DataFrame(mis), use_container_width=True, hide_index=True)
+
+        st.markdown("### 📊 By Profile")
+        by_prof = metrics.get("by_profile", {})
+        if by_prof:
+            prof_data = [{"Profile": p.replace("_"," ").title(), "Count": v["count"], "Accuracy": f"{v['accuracy']:.1%}", "Avg Risk": f"{v['avg_risk']:.1%}"} for p, v in by_prof.items()]
+            st.dataframe(pd.DataFrame(prof_data), use_container_width=True, hide_index=True)
+    else:
+        st.info("No evaluation yet. Click 'Run Evaluation' above.")
+
+
+# ===========================================================================
+# Page: Data Quality
+# ===========================================================================
     st.markdown("## 📊 Data Quality Dashboard")
     st.markdown("""
     <div class="info-box">

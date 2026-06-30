@@ -525,7 +525,7 @@ def get_peer_benchmark(farmer_id: int, db: Session = Depends(get_db)):
 # ---------------------------------------------------------------------------
 @router.get("/farmers/{farmer_id}/shap-explanation")
 def get_shap_explanation(farmer_id: int, db: Session = Depends(get_db)):
-    """Get per-prediction SHAP explanation. Requires: pip install shap."""
+    """Get per-prediction SHAP explanation."""
     from ..services.shap_explainer import generate_shap_explanation
     from ..services.ml_service import load_or_train_models, engineer_features
     from ..services.financial_analysis import calculate_financial_ratios
@@ -536,10 +536,8 @@ def get_shap_explanation(farmer_id: int, db: Session = Depends(get_db)):
     if not farmer:
         raise HTTPException(404, "Farmer not found")
 
-    # Load model
     risk_model, _, _ = load_or_train_models()
 
-    # Gather features (same as prediction endpoint does)
     financials = db.query(FinancialRecord).filter(FinancialRecord.farmer_id == farmer_id).order_by(FinancialRecord.year.desc()).all()
     loans = db.query(ExistingLoan).filter(ExistingLoan.farmer_id == farmer_id).all()
     ops = db.query(OperationalData).filter(OperationalData.farmer_id == farmer_id).first()
@@ -554,6 +552,56 @@ def get_shap_explanation(farmer_id: int, db: Session = Depends(get_db)):
     from ..services.ml_service import FEATURE_NAMES
     result = generate_shap_explanation(risk_model, features, FEATURE_NAMES)
     return result
+
+
+# ---------------------------------------------------------------------------
+# Model Evaluation (Deployment Simulation)
+# ---------------------------------------------------------------------------
+@router.post("/ml/evaluate")
+def run_deployment_evaluation(n_farmers: int = 1000, seed: int = 999):
+    """Generate 1000 unseen farmers and evaluate model performance."""
+    from ..services.evaluation import (
+        generate_evaluation_set, run_batch_inference, compute_evaluation_metrics,
+    )
+
+    logger.info(f"Generating {n_farmers} eval farmers (seed={seed})...")
+    farmers = generate_evaluation_set(n_farmers=n_farmers, seed=seed)
+
+    logger.info(f"Running batch inference on {len(farmers)} farmers...")
+    results = run_batch_inference(farmers)
+
+    logger.info("Computing evaluation metrics...")
+    metrics = compute_evaluation_metrics(results)
+
+    # Save to disk
+    import json
+    from datetime import datetime
+    from pathlib import Path
+    eval_dir = Path("data/evaluations")
+    eval_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    with open(eval_dir / f"evaluation_{timestamp}.json", "w") as f:
+        json.dump({"metrics": metrics, "n_samples": len(results)}, f, indent=2)
+
+    return {
+        "status": "complete",
+        "n_farmers": len(results),
+        "metrics": metrics,
+        "saved_to": f"data/evaluations/evaluation_{timestamp}.json",
+    }
+
+
+@router.get("/ml/latest-evaluation")
+def get_latest_evaluation():
+    """Get the most recent evaluation results."""
+    import json
+    from pathlib import Path
+    eval_dir = Path("data/evaluations")
+    files = sorted(eval_dir.glob("evaluation_*.json"), reverse=True)
+    if not files:
+        raise HTTPException(404, "No evaluation found. Run POST /ml/evaluate first.")
+    with open(files[0]) as f:
+        return json.load(f)
 
     financials = (
         db.query(FinancialRecord)
