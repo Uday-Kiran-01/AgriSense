@@ -442,6 +442,11 @@ def get_decision_readiness(farmer_id: int, db: Session = Depends(get_db)):
         .filter(OperationalData.farmer_id == farmer_id)
         .first()
     )
+    loans = (
+        db.query(ExistingLoan)
+        .filter(ExistingLoan.farmer_id == farmer_id)
+        .all()
+    )
     latest_pred = (
         db.query(Prediction)
         .filter(Prediction.farmer_id == farmer_id)
@@ -453,6 +458,7 @@ def get_decision_readiness(farmer_id: int, db: Session = Depends(get_db)):
         farmer_id,
         documents,
         [r.__dict__ for r in financials],
+        [l.__dict__ for l in loans],
         ops.__dict__ if ops else None,
         n_conflicts=0,
         n_outliers=0,

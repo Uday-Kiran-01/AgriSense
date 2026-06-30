@@ -8,6 +8,7 @@ Answers:
   - Are all required documents present? (Completeness)
   - Are they recent enough? (Freshness)
   - Are there conflicts between sources? (Ambiguity)
+  - Does the farmer have credit history? (Thin File)
   - Is enough evidence available? (Decision Readiness)
 
 Three outcomes:
@@ -347,10 +348,208 @@ def calculate_decision_readiness(
     }
 
 
+def _to_int(val) -> int:
+    if val is None: return 0
+    if isinstance(val, bytes): return int.from_bytes(val, 'little')
+    return int(val)
+
+
+def assess_credit_history(existing_loans: list[dict]) -> dict:
+    """
+    Detect thin file — no previous loans is NOT the same as low risk.
+    It means insufficient historical evidence.
+
+    Returns credit history profile with evidence quality rating.
+    """
+    if not existing_loans:
+        return {
+            "profile": "thin_file",
+            "has_credit_history": False,
+            "active_loans": 0,
+            "completed_loans": 0,
+            "total_historical_loans": 0,
+            "evidence_quality": "unavailable",
+            "evidence_stars": 0,
+            "message": "No borrowing history available. Repayment behaviour cannot be assessed from historical loan performance.",
+            "model_impact": "Prediction relies on financial strength and operational data rather than credit history.",
+        }
+
+    active = len(existing_loans)
+    total_on_time = sum(_to_int(l.get("on_time_payments", 0)) for l in existing_loans)
+    total_due = sum(_to_int(l.get("total_payments_due", 1)) for l in existing_loans)
+    repayment_ratio = total_on_time / max(total_due, 1)
+
+    # Classify credit history quality
+    if active >= 3 and repayment_ratio >= 0.95:
+        quality = "excellent"
+        stars = 5
+        msg = f"Strong credit history: {active} loans, {repayment_ratio:.0%} on-time payments."
+    elif active >= 2 and repayment_ratio >= 0.85:
+        quality = "good"
+        stars = 4
+        msg = f"Good credit history: {active} loans, {repayment_ratio:.0%} on-time payments."
+    elif active >= 1 and repayment_ratio >= 0.75:
+        quality = "adequate"
+        stars = 3
+        msg = f"Adequate credit history: {active} loan(s), {repayment_ratio:.0%} on-time payments."
+    elif active >= 1:
+        quality = "limited"
+        stars = 2
+        msg = f"Limited credit history with {repayment_ratio:.0%} on-time rate. Some delays observed."
+    else:
+        quality = "insufficient"
+        stars = 1
+        msg = "Minimal credit history — insufficient for reliable assessment."
+
+    return {
+        "profile": "established_borrower" if quality in ("excellent", "good") else "limited_history",
+        "has_credit_history": True,
+        "active_loans": active,
+        "total_historical_loans": active,
+        "on_time_payments": total_on_time,
+        "total_payments_due": total_due,
+        "repayment_ratio": round(repayment_ratio, 3),
+        "evidence_quality": quality,
+        "evidence_stars": stars,
+        "message": msg,
+        "model_impact": "Prediction incorporates historical repayment behaviour alongside financial data.",
+    }
+
+
+def assess_evidence_categories(
+    financial_records: list[dict],
+    existing_loans: list[dict],
+    operational_data: dict | None,
+    external_data_available: bool = True,
+) -> dict:
+    """
+    Rate each evidence category with star ratings (0-5).
+
+    Categories:
+    - Financial Evidence (from financial records)
+    - Credit History (from loan repayment)
+    - Operational Evidence (farm size, crops, machinery)
+    - Environmental Evidence (weather, commodity, subsidies)
+    """
+    categories = {}
+
+    # Financial Evidence
+    if financial_records:
+        n_years = len(financial_records)
+        latest = financial_records[0] if financial_records else {}
+        revenue = latest.get("revenue", 0)
+        margin = latest.get("net_income", 0) / max(revenue, 1)
+
+        if n_years >= 3 and revenue > 500000 and margin > 0.15:
+            stars = 5
+            detail = f"Strong: {n_years} years of financial data, healthy margins"
+        elif n_years >= 2 and revenue > 300000:
+            stars = 4
+            detail = f"Good: {n_years} years of financial data"
+        elif n_years >= 1 and revenue > 100000:
+            stars = 3
+            detail = f"Adequate: {n_years} year(s) of financial data"
+        elif n_years >= 1:
+            stars = 2
+            detail = "Limited: single year, low revenue"
+        else:
+            stars = 0
+            detail = "No financial records available"
+
+        categories["financial"] = {
+            "label": "Financial Evidence",
+            "stars": stars,
+            "max_stars": 5,
+            "detail": detail,
+            "years_available": n_years,
+        }
+    else:
+        categories["financial"] = {
+            "label": "Financial Evidence", "stars": 0, "max_stars": 5,
+            "detail": "No financial records", "years_available": 0,
+        }
+
+    # Credit History
+    credit = assess_credit_history(existing_loans)
+    categories["credit_history"] = {
+        "label": "Credit History",
+        "stars": credit["evidence_stars"],
+        "max_stars": 5,
+        "detail": credit["message"],
+        "profile": credit["profile"],
+        "has_credit_history": credit["has_credit_history"],
+    }
+
+    # Operational Evidence
+    if operational_data:
+        ops = operational_data
+        farm_size = ops.get("farm_size_acres", 0)
+        has_insurance = ops.get("has_insurance", False)
+        has_tractor = ops.get("has_tractor", False)
+
+        stars = 3  # base
+        if farm_size > 30:
+            stars += 1
+        if has_insurance:
+            stars += 1
+        if has_tractor:
+            stars += 1
+        stars = min(5, stars)
+
+        categories["operational"] = {
+            "label": "Operational Evidence",
+            "stars": stars,
+            "max_stars": 5,
+            "detail": f"Farm: {farm_size:.0f} ha, {ops.get('crop_type', 'N/A')}",
+            "farm_size_ha": farm_size,
+        }
+    else:
+        categories["operational"] = {
+            "label": "Operational Evidence", "stars": 0, "max_stars": 5,
+            "detail": "No operational data", "farm_size_ha": 0,
+        }
+
+    # Environmental Evidence
+    if external_data_available:
+        categories["environmental"] = {
+            "label": "Environmental Evidence",
+            "stars": 4,
+            "max_stars": 5,
+            "detail": "Weather, commodity, and subsidy data available",
+        }
+    else:
+        categories["environmental"] = {
+            "label": "Environmental Evidence", "stars": 0, "max_stars": 5,
+            "detail": "External data unavailable",
+        }
+
+    # Compute overall evidence confidence from stars
+    total_stars = sum(c["stars"] for c in categories.values())
+    max_stars = sum(c["max_stars"] for c in categories.values())
+    evidence_confidence = round((total_stars / max_stars * 100) if max_stars > 0 else 0, 1)
+
+    # Identify which evidence is missing/weak
+    weak_categories = [c["label"] for c in categories.values() if c["stars"] <= 1]
+
+    return {
+        "categories": categories,
+        "total_stars": total_stars,
+        "max_stars": max_stars,
+        "evidence_confidence_pct": evidence_confidence,
+        "weak_categories": weak_categories,
+        "has_thin_file": credit["profile"] == "thin_file",
+        "thin_file_note": (
+            "Credit history is unavailable — assessment relies on financial "
+            "and operational evidence rather than borrowing history."
+        ) if credit["profile"] == "thin_file" else None,
+    }
+
+
 def run_full_readiness_assessment(
     farmer_id: int,
     documents: list[dict],
     financial_records: list[dict],
+    existing_loans: list[dict],
     operational_data: dict | None,
     n_conflicts: int = 0,
     n_outliers: int = 0,
@@ -373,12 +572,18 @@ def run_full_readiness_assessment(
         model_confidence,
         len(completeness.get("missing_required", [])),
     )
+    credit = assess_credit_history(existing_loans)
+    evidence_cats = assess_evidence_categories(
+        financial_records, existing_loans, operational_data,
+    )
 
     report = {
         "farmer_id": farmer_id,
         "timestamp": datetime.now().isoformat(),
         "completeness": completeness,
         "freshness": freshness,
+        "credit_history": credit,
+        "evidence_categories": evidence_cats,
         "evidence_quality": evidence,
         "decision_readiness": readiness,
         "summary": {
@@ -389,10 +594,13 @@ def run_full_readiness_assessment(
             "level": readiness["level"],
             "can_assess": readiness["level"] != "insufficient",
             "needs_human_review": readiness["level"] in ("reduced_confidence", "insufficient"),
+            "has_credit_history": credit["has_credit_history"],
+            "thin_file": credit["profile"] == "thin_file",
         },
     }
 
     logger.info(f"Decision readiness for farmer {farmer_id}: "
-                f"{readiness['decision_readiness_pct']:.0f}% ({readiness['level']})")
+                f"{readiness['decision_readiness_pct']:.0f}% ({readiness['level']}), "
+                f"credit={credit['profile']}")
 
     return report
