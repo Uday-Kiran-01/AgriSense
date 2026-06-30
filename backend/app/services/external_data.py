@@ -281,7 +281,7 @@ async def fetch_faostat_data(commodity: str = "WHEAT", years: int = 5) -> dict:
                 f"/{FAOSTAT_ELEMENTS['production']}"
                 f"/{start_year}/{current_year}"
             )
-            resp = await client.get(url, timeout=15.0)
+            resp = await client.get(url, timeout=8.0)
 
             if resp.status_code == 200:
                 data = resp.json()
@@ -366,7 +366,7 @@ async def fetch_eurostat_data(dataset: str = "crop_prices") -> dict:
                 f"{settings.EUROSTAT_BASE_URL}/{dataset_code}"
                 f"?format=JSON&lang=en"
             )
-            resp = await client.get(url, timeout=15.0)
+            resp = await client.get(url, timeout=8.0)
 
             if resp.status_code == 200:
                 data = resp.json()
@@ -425,13 +425,39 @@ async def fetch_fuel_prices() -> dict:
 async def get_all_external_data(region: str = "Skane", commodity: str = "WHEAT") -> dict:
     """
     Fetch all external data concurrently from free public APIs.
+    Each API is called independently — slow APIs don't block fast ones.
     Returns a unified external data dictionary.
     """
-    weather = await fetch_weather_data(region)
-    commodity_data = await fetch_commodity_prices(commodity)
-    faostat = await fetch_faostat_data(commodity)
-    eurostat = await fetch_eurostat_data("crop_prices")
-    fuel = await fetch_fuel_prices()
+    import asyncio
+
+    # Fire all API calls concurrently
+    weather_task = asyncio.create_task(fetch_weather_data(region))
+    commodity_task = asyncio.create_task(fetch_commodity_prices(commodity))
+    faostat_task = asyncio.create_task(fetch_faostat_data(commodity))
+    eurostat_task = asyncio.create_task(fetch_eurostat_data("crop_prices"))
+    fuel_task = asyncio.create_task(fetch_fuel_prices())
+
+    weather, commodity_data, faostat, eurostat, fuel = await asyncio.gather(
+        weather_task, commodity_task, faostat_task, eurostat_task, fuel_task,
+        return_exceptions=True,
+    )
+
+    # If any task raised an exception, log and use empty fallback
+    if isinstance(weather, Exception):
+        logger.warning(f"Weather fetch failed: {weather}")
+        weather = {"source": "error", "is_mock": True, "error": str(weather)}
+    if isinstance(commodity_data, Exception):
+        logger.warning(f"Commodity fetch failed: {commodity_data}")
+        commodity_data = {"source": "error", "is_mock": True, "error": str(commodity_data)}
+    if isinstance(faostat, Exception):
+        logger.warning(f"FAOSTAT fetch failed: {faostat}")
+        faostat = {"source": "error", "is_mock": True, "error": str(faostat)}
+    if isinstance(eurostat, Exception):
+        logger.warning(f"Eurostat fetch failed: {eurostat}")
+        eurostat = {"source": "error", "is_mock": True, "error": str(eurostat)}
+    if isinstance(fuel, Exception):
+        logger.warning(f"Fuel fetch failed: {fuel}")
+        fuel = {"source": "error", "is_mock": True, "error": str(fuel)}
 
     return {
         "weather": weather,
@@ -440,8 +466,8 @@ async def get_all_external_data(region: str = "Skane", commodity: str = "WHEAT")
         "eurostat": eurostat,
         "fuel": fuel,
         "government_subsidies": {
-            "eu_cap_direct": 115000.0,    # EU CAP direct payment (SEK/yr, ~230 EUR/ha x 50ha)
-            "greening_payment": 32000.0,   # CAP greening component
+            "eu_cap_direct": 115000.0,
+            "greening_payment": 32000.0,
             "source": "mock_jordbruksverket",
         },
     }
