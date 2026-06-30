@@ -561,8 +561,7 @@ def get_shap_explanation(farmer_id: int, db: Session = Depends(get_db)):
 def run_deployment_evaluation(n_farmers: int = 1000, seed: int = 999):
     """Generate 1000 unseen farmers and evaluate model performance."""
     from ..services.evaluation import (
-        generate_evaluation_set, run_batch_inference,
-        compute_evaluation_metrics, compute_threshold_curve,
+        generate_evaluation_set, run_batch_inference, compute_evaluation_metrics,
     )
 
     logger.info(f"Generating {n_farmers} eval farmers (seed={seed})...")
@@ -573,7 +572,6 @@ def run_deployment_evaluation(n_farmers: int = 1000, seed: int = 999):
 
     logger.info("Computing evaluation metrics...")
     metrics = compute_evaluation_metrics(results)
-    threshold_curve = compute_threshold_curve(results)
 
     # Save to disk
     import json
@@ -589,7 +587,6 @@ def run_deployment_evaluation(n_farmers: int = 1000, seed: int = 999):
         "status": "complete",
         "n_farmers": len(results),
         "metrics": metrics,
-        "threshold_curve": threshold_curve,
         "saved_to": f"data/evaluations/evaluation_{timestamp}.json",
     }
 
@@ -600,9 +597,9 @@ def get_latest_evaluation():
     import json
     from pathlib import Path
     eval_dir = Path("data/evaluations")
-    files = sorted(eval_dir.glob("evaluation_*.json"), reverse=True)
+    files = sorted(eval_dir.glob("eval_latest.json"), reverse=True)
     if not files:
-        raise HTTPException(404, "No evaluation found. Run POST /ml/evaluate first.")
+        raise HTTPException(404, "No evaluation found. Run: python run_eval.py")
     with open(files[0]) as f:
         return json.load(f)
 

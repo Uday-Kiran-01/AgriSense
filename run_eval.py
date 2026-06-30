@@ -1,37 +1,61 @@
-from backend.app.services.evaluation import generate_evaluation_set, run_batch_inference, compute_evaluation_metrics, compute_threshold_curve
+"""Run full evaluation on 1000 farmers and save individual predictions."""
+import json, datetime
+from pathlib import Path
+from backend.app.services.evaluation import generate_evaluation_set, run_batch_inference, compute_evaluation_metrics
 
-print("Generating 1000 eval farmers (seed=999, shifted distributions)...")
+print("Generating 1,000 eval farmers (seed=999)...")
 farmers = generate_evaluation_set(n_farmers=1000, seed=999)
-print("Running batch inference...")
+
+print("Running batch inference (this takes ~2 min)...")
 results = run_batch_inference(farmers)
+
 print("Computing metrics...")
 metrics = compute_evaluation_metrics(results)
-curve = compute_threshold_curve(results)
 m = metrics["metrics"]
 
-print("=" * 55)
-print("MODEL EVALUATION - 1,000 Unseen Farmers")
-print("(Different seed, shifted distributions from training)")
-print("=" * 55)
-print("Accuracy:  ", round(m['accuracy'] * 100, 1), "%")
-print("Precision: ", round(m['precision'] * 100, 1), "%")
-print("Recall:    ", round(m['recall'] * 100, 1), "%")
-print("F1 Score:  ", round(m['f1_score'], 3))
-print("ROC-AUC:   ", round(m['roc_auc'], 3))
-print("TP:", m["true_positives"], "FP:", m["false_positives"])
-print("FN:", m["false_negatives"], "TN:", m["true_negatives"])
-print()
+print(f"\nDone! {len(results)} farmers evaluated.")
+print(f"Accuracy:  {m['accuracy']:.1%}")
+print(f"Precision: {m['precision']:.1%}")
+print(f"Recall:    {m['recall']:.1%}")
+print(f"F1:        {m['f1_score']:.3f}")
+print(f"ROC-AUC:   {m['roc_auc']:.3f}")
+print(f"TP={m['true_positives']} FP={m['false_positives']} FN={m['false_negatives']} TN={m['true_negatives']}")
 
-print("PRECISION-RECALL TRADE-OFF BY THRESHOLD")
-print("Thr  | Precision | Recall   | F1    | Reviews | Business Impact")
-print("-" * 70)
-for c in curve["curve"]:
-    t = c["threshold"]
-    if t in [0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65]:
-        print("{:.2f} | {:.1%}     | {:.1%}    | {:.3f} | {:4d}   | {}".format(
-            t, c['precision'], c['recall'], c['f1'], c['manual_reviews'],
-            c['interpretation'][:50]))
+# Save individual predictions for threshold slider
+eval_dir = Path("data/evaluations")
+eval_dir.mkdir(parents=True, exist_ok=True)
 
-print()
-print("Caveat: Synthetic evaluation data. Not production lending performance.")
-print("All recommendations are advisory. Final decisions by human loan officers.")
+individuals = []
+for r in results:
+    individuals.append({
+        "name": str(r.get("farmer_name", "")),
+        "profile": str(r.get("profile", "")),
+        "actual_high_risk": bool(r.get("actual_high_risk", False)),
+        "predicted_risk_score": float(r.get("predicted_risk_score", 0)),
+        "predicted_repay_prob": float(r.get("predicted_repay_prob", 0)),
+        "recommendation": str(r.get("recommendation", "")),
+        "dti": float(r.get("dti", 0)),
+        "dscr": float(r.get("dscr", 0)),
+        "liquidity_status": str(r.get("liquidity_status", "")),
+        "negative_months": int(r.get("negative_months", 0)),
+        "has_insurance": bool(r.get("has_insurance", False)),
+    })
+
+ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+data = {
+    "evaluation_date": ts,
+    "n_farmers": len(results),
+    "seed": 999,
+    "note": "Different seed and shifted distributions from training (seed=42).",
+    "metrics": metrics,
+    "individual_predictions": individuals,
+}
+
+with open(eval_dir / f"eval_full_{ts}.json", "w") as f:
+    json.dump(data, f, indent=2, default=str)
+
+with open(eval_dir / "eval_latest.json", "w") as f:
+    json.dump(data, f, indent=2, default=str)
+
+print(f"\nSaved: data/evaluations/eval_full_{ts}.json")
+print("Ready for threshold slider!")
