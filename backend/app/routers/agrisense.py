@@ -254,11 +254,13 @@ def get_predictions(farmer_id: int, db: Session = Depends(get_db)):
 
 
 # ---------------------------------------------------------------------------
-# Scenario Analysis
+# Scenario Analysis (Investment Simulator)
 # ---------------------------------------------------------------------------
-@router.post("/scenarios", response_model=ScenarioResultRead)
+@router.post("/scenarios")
 async def run_scenario_analysis(req: ScenarioRequest, db: Session = Depends(get_db)):
-    """Run a what-if scenario."""
+    """Run a single what-if scenario."""
+    from ..services.scenario_analysis import run_single_scenario
+
     financials = (
         db.query(FinancialRecord)
         .filter(FinancialRecord.farmer_id == req.farmer_id)
@@ -285,9 +287,96 @@ async def run_scenario_analysis(req: ScenarioRequest, db: Session = Depends(get_
         ops.__dict__ if ops else None,
     )
 
-    result = run_scenario(
+    modified_fin, modified_loans, modified_ops, name = run_single_scenario(
         req.scenario_type,
         req.parameters,
+        [r.__dict__ for r in financials],
+        [l.__dict__ for l in loans],
+        ops.__dict__ if ops else None,
+    )
+
+    new_ratios = calculate_financial_ratios(modified_fin, modified_loans, modified_ops)
+
+    risk_change = "unchanged"
+    old_dti = base_ratios.get("debt_to_income", 0)
+    new_dti = new_ratios.get("debt_to_income", 0)
+    if new_dti > old_dti * 1.15:
+        risk_change = "worsened"
+    elif new_dti < old_dti * 0.85:
+        risk_change = "improved"
+
+    from ..services.scenario_analysis import _generate_investment_narrative
+    narrative = _generate_investment_narrative(
+        name, risk_change,
+        base_ratios.get("debt_to_income", 0), new_ratios.get("debt_to_income", 0),
+        base_ratios.get("dscr", 1), new_ratios.get("dscr", 1),
+        sum(l.get("outstanding_balance", 0) for l in modified_loans) -
+        sum(l.outstanding_balance for l in loans),
+        sum(l.get("monthly_emi", 0) for l in modified_loans) -
+        sum(l.monthly_emi for l in loans),
+    )
+
+    scenario = ScenarioResult(
+        farmer_id=req.farmer_id,
+        scenario_name=name,
+        scenario_type=req.scenario_type,
+        parameters_json=json.dumps(req.parameters),
+        new_debt_to_income=new_ratios.get("debt_to_income"),
+        new_dscr=new_ratios.get("dscr"),
+        risk_change=risk_change,
+        recommendation=narrative,
+    )
+    db.add(scenario)
+    db.commit()
+    db.refresh(scenario)
+    return scenario
+
+
+# ---------------------------------------------------------------------------
+# Investment Simulator (Combined Scenarios)
+# ---------------------------------------------------------------------------
+@router.post("/investment-simulator")
+async def run_investment_simulator(
+    farmer_id: int, scenarios: list[dict], db: Session = Depends(get_db),
+):
+    """
+    Run multiple scenarios combined and return full before/after comparison.
+
+    Body: { "farmer_id": 2501, "scenarios": [
+        {"type": "new_tractor_loan", "params": {"tractor_cost": 850000, ...}},
+        {"type": "commodity_price", "params": {"price_change_pct": -15}},
+    ]}
+    """
+    from ..services.scenario_analysis import run_combined_scenarios
+
+    financials = (
+        db.query(FinancialRecord)
+        .filter(FinancialRecord.farmer_id == farmer_id)
+        .order_by(FinancialRecord.year.desc())
+        .all()
+    )
+    loans = (
+        db.query(ExistingLoan)
+        .filter(ExistingLoan.farmer_id == farmer_id)
+        .all()
+    )
+    ops = (
+        db.query(OperationalData)
+        .filter(OperationalData.farmer_id == farmer_id)
+        .first()
+    )
+
+    if not financials:
+        raise HTTPException(404, "No financial records found")
+
+    base_ratios = calculate_financial_ratios(
+        [r.__dict__ for r in financials],
+        [l.__dict__ for l in loans],
+        ops.__dict__ if ops else None,
+    )
+
+    result = run_combined_scenarios(
+        scenarios,
         [r.__dict__ for r in financials],
         [l.__dict__ for l in loans],
         ops.__dict__ if ops else None,
@@ -295,24 +384,29 @@ async def run_scenario_analysis(req: ScenarioRequest, db: Session = Depends(get_
     )
 
     # Store result
+    combined_name = result["scenario_name"]
     scenario = ScenarioResult(
-        farmer_id=req.farmer_id,
-        scenario_name=result["scenario_name"],
-        scenario_type=result["scenario_type"],
-        parameters_json=json.dumps(result["parameters"]),
-        new_debt_to_income=result["new_ratios"].get("debt_to_income"),
-        new_dscr=result["new_ratios"].get("dscr"),
-        new_credit_risk=None,
-        new_repayment_probability=None,
-        new_debt_capacity=None,
+        farmer_id=farmer_id,
+        scenario_name=combined_name,
+        scenario_type="combined",
+        parameters_json=json.dumps({"scenarios": result["scenarios_applied"]}),
+        new_debt_to_income=result["after"]["debt_to_income"],
+        new_dscr=result["after"]["dscr"],
         risk_change=result["risk_change"],
-        recommendation=result.get("recommendation"),
+        recommendation=result["recommendation"],
     )
     db.add(scenario)
     db.commit()
     db.refresh(scenario)
 
-    return scenario
+    return result
+
+
+@router.get("/investment-presets")
+def get_investment_presets():
+    """Return available investment simulation presets."""
+    from ..services.scenario_analysis import INVESTMENT_PRESETS
+    return INVESTMENT_PRESETS
 
 
 @router.get("/farmers/{farmer_id}/scenarios", response_model=list[ScenarioResultRead])

@@ -84,7 +84,7 @@ with st.sidebar:
             "🏦 Existing Loans",
             "🌦️ External Risk",
             "🤖 AI Prediction",
-            "🔮 Scenario Analysis",
+            "� Investment Simulator",
             "📝 Decision Memo",
             "🏗️ How It Works",
         ],
@@ -691,118 +691,216 @@ elif page == "🤖 AI Prediction":
 # ===========================================================================
 # Page: Scenario Analysis
 # ===========================================================================
-elif page == "🔮 Scenario Analysis":
-    st.markdown("## 🔮 Scenario Analysis")
-
+elif page == "� Investment Simulator":
+    st.markdown("## 💡 Investment Simulator")
     st.markdown("""
     <div class="info-box">
-    Simulate "what-if" scenarios to understand how changes in weather, prices,
-    or new loans affect the farmer's financial position.
+    Simulate investment decisions and see their full financial impact.
+    Combine investments with weather and market conditions to understand
+    the complete picture before making a commitment.
     </div>
     """, unsafe_allow_html=True)
 
-    scenario_type = st.selectbox(
-        "Select Scenario",
-        ["rainfall", "commodity", "new_loan", "interest", "fuel", "tractor_purchase"],
-        format_func=lambda x: {
-            "rainfall": "🌧️ Rainfall Change",
-            "commodity": "📉 Commodity Price Drop",
-            "new_loan": "💰 New Loan",
-            "interest": "📈 Interest Rate Hike",
-            "fuel": "⛽ Fuel Price Increase",
-            "tractor_purchase": "🚜 Tractor Purchase",
-        }.get(x, x),
-    )
+    # ---- Investment Presets ----
+    st.markdown("### 🎯 Choose an Investment Scenario")
 
-    params = {}
-    if scenario_type == "rainfall":
-        params["rainfall_change_pct"] = st.slider("Rainfall Change (%)", -50, 30, -20, 5)
-    elif scenario_type == "commodity":
-        params["price_change_pct"] = st.slider("Commodity Price Change (%)", -50, 30, -15, 5)
-    elif scenario_type == "new_loan":
-        params["loan_amount"] = st.number_input("Loan Amount (SEK)", 50000, 2000000, 200000, 50000)
-        params["interest_rate"] = st.slider("Interest Rate (%)", 5.0, 18.0, 10.0, 0.5)
-        params["tenure_months"] = st.slider("Tenure (months)", 12, 120, 36, 12)
-    elif scenario_type == "interest":
-        params["rate_change_pct"] = st.slider("Interest Rate Increase (%)", 1, 10, 2, 1)
-    elif scenario_type == "fuel":
-        params["fuel_price_change_pct"] = st.slider("Fuel Price Increase (%)", 5, 50, 15, 5)
-    elif scenario_type == "tractor_purchase":
-        params["tractor_cost"] = st.number_input("Tractor Cost (SEK)", 200000, 1500000, 500000, 50000)
-        params["loan_amount"] = st.number_input("Loan Amount (SEK)", 100000, 1500000, 400000, 50000)
-        params["interest_rate"] = st.slider("Interest Rate (%)", 5.0, 15.0, 8.0, 0.5)
+    presets = fetch_json("/investment-presets") or {}
 
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        run_btn = st.button("🔮 Run Scenario", type="primary", use_container_width=True)
-    with col2:
-        st.caption("Recalculates all ratios and risk scores")
+    col1, col2, col3 = st.columns(3)
+    selected_presets = {}
 
-    if run_btn:
-        with st.spinner("Running scenario analysis..."):
-            import requests as req
-            try:
-                resp = req.post(
-                    f"{API_BASE}/scenarios",
-                    json={"farmer_id": FARMER_ID, "scenario_type": scenario_type, "parameters": params},
-                    timeout=30,
-                )
-                if resp.status_code == 200:
-                    st.success("✅ Scenario complete! Refresh to see comparison.")
-                    st.rerun()
-                else:
-                    st.error(f"Error: {resp.status_code}")
-            except Exception as e:
-                st.error(f"Backend error: {e}")
+    preset_keys = list(presets.keys())
+    for i, key in enumerate(preset_keys):
+        preset = presets[key]
+        col = [col1, col2, col3][i % 3]
+        with col:
+            if st.button(f"{preset['icon']} {preset['label']}", key=f"preset_{key}", use_container_width=True):
+                selected_presets[key] = preset["scenarios"]
+                st.session_state["selected_investment"] = key
+                st.session_state["selected_scenarios"] = preset["scenarios"]
 
-    # Show past scenarios with Before/After (#5)
-    scenarios = fetch_json(f"/farmers/{FARMER_ID}/scenarios")
-    if scenarios and len(scenarios) > 0:
+    st.markdown("---")
+
+    # ---- Custom Scenario Builder ----
+    with st.expander("⚙️ Custom Scenario Builder", expanded="selected_investment" not in st.session_state):
+        st.markdown("#### Add scenarios to combine")
+
+        custom_scenarios = []
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("**Financial**")
+            if st.checkbox("New Farm Loan"):
+                amt = st.number_input("Loan Amount (SEK)", 100000, 5000000, 500000, 50000, key="fl_amt")
+                rate = st.slider("Interest Rate (%)", 3.0, 10.0, 5.0, 0.5, key="fl_rate")
+                tenure = st.slider("Tenure (months)", 12, 240, 120, 12, key="fl_tenure")
+                custom_scenarios.append({"type": "new_farm_loan", "params": {
+                    "loan_amount": amt, "interest_rate": rate, "tenure_months": tenure}})
+
+            if st.checkbox("Working Capital Loan"):
+                wc_amt = st.number_input("Loan Amount (SEK)", 50000, 1000000, 200000, 25000, key="wc_amt")
+                wc_rate = st.slider("Interest Rate (%)", 4.0, 12.0, 6.5, 0.5, key="wc_rate")
+                custom_scenarios.append({"type": "working_capital_loan", "params": {
+                    "loan_amount": wc_amt, "interest_rate": wc_rate, "tenure_months": 24}})
+
+            if st.checkbox("Refinance Existing Loans"):
+                new_rate = st.slider("New Interest Rate (%)", 2.0, 8.0, 4.2, 0.1, key="refi_rate")
+                custom_scenarios.append({"type": "refinance", "params": {"new_rate": new_rate}})
+
+        with col2:
+            st.markdown("**Environmental & Market**")
+            if st.checkbox("Rainfall Change"):
+                rain_pct = st.slider("Rainfall Change (%)", -50, 30, -20, 5, key="rain_pct")
+                custom_scenarios.append({"type": "rainfall_change", "params": {"rainfall_change_pct": rain_pct}})
+
+            if st.checkbox("Commodity Price Drop"):
+                comm_pct = st.slider("Price Change (%)", -50, 30, -15, 5, key="comm_pct")
+                custom_scenarios.append({"type": "commodity_price", "params": {"price_change_pct": comm_pct}})
+
+            if st.checkbox("Fuel Price Increase"):
+                fuel_pct = st.slider("Fuel Increase (%)", 5, 50, 15, 5, key="fuel_pct")
+                custom_scenarios.append({"type": "fuel_price", "params": {"fuel_price_change_pct": fuel_pct}})
+
+        st.markdown("**Operational**")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.checkbox("Farm Expansion"):
+                add_ha = st.number_input("Additional Hectares", 5, 100, 20, 5, key="exp_ha")
+                custom_scenarios.append({"type": "farm_expansion", "params": {
+                    "additional_hectares": add_ha, "land_cost_per_ha": 85000,
+                    "loan_pct": 70, "interest_rate": 4.5, "tenure_months": 120}})
+
+            if st.checkbox("Install Irrigation"):
+                irr_cost = st.number_input("System Cost (SEK)", 100000, 1000000, 350000, 50000, key="irr_cost")
+                custom_scenarios.append({"type": "install_irrigation", "params": {
+                    "system_cost": irr_cost, "loan_pct": 80, "interest_rate": 5.0, "tenure_months": 48}})
+
+        with col2:
+            if st.checkbox("Crop Change"):
+                new_crop = st.selectbox("New Crop", ["Hostvete", "Varkorn", "Havre", "Hostraps", "Arter"])
+                custom_scenarios.append({"type": "crop_change", "params": {
+                    "new_crop": new_crop, "yield_change_pct": 10, "price_factor": 1.15}})
+
+            if st.checkbox("Build Storage Facility"):
+                store_cost = st.number_input("Construction Cost (SEK)", 200000, 2000000, 500000, 50000, key="store_cost")
+                custom_scenarios.append({"type": "build_storage", "params": {
+                    "construction_cost": store_cost, "loan_pct": 60, "interest_rate": 4.8, "tenure_months": 84}})
+
+    # ---- Run Simulation ----
+    scenarios_to_run = st.session_state.get("selected_scenarios", []) or custom_scenarios
+
+    if scenarios_to_run:
         st.markdown("---")
-        st.markdown("### 📊 Scenario History — Before vs After")
+        scenario_desc = " + ".join(
+            presets.get(st.session_state.get("selected_investment", ""), {}).get("label", s["type"])
+            if st.session_state.get("selected_investment") else s["type"].replace("_", " ").title()
+            for s in scenarios_to_run
+        )
+        st.markdown(f"**Active scenarios:** {scenario_desc}")
 
-        for s in scenarios[:5]:
-            comp = fetch_json(f"/farmers/{FARMER_ID}/scenario-comparison/{s['id']}")
+        if st.button("💡 Simulate Investment Impact", type="primary", use_container_width=True):
+            with st.spinner("Running investment simulation..."):
+                try:
+                    resp = requests.post(
+                        f"{API_BASE}/investment-simulator",
+                        params={"farmer_id": FARMER_ID},
+                        json=scenarios_to_run,
+                        timeout=30,
+                    )
+                    if resp.status_code == 200:
+                        result = resp.json()
+                        st.session_state["sim_result"] = result
+                        st.success("✅ Simulation complete!")
+                        st.rerun()
+                    else:
+                        st.error(f"Error: {resp.status_code} — {resp.text}")
+                except Exception as e:
+                    st.error(f"Backend error: {e}")
 
+    # ---- Show Comparison Table ----
+    sim_result = st.session_state.get("sim_result")
+    if sim_result:
+        st.markdown("---")
+        st.markdown(f"### 📊 Investment Impact: {sim_result.get('scenario_name', '')}")
+
+        before = sim_result.get("before", {})
+        after = sim_result.get("after", {})
+        changes = sim_result.get("changes", {})
+
+        # Comparison table
+        comp_data = []
+        for label, key, fmt in [
+            ("Existing Debt", "existing_debt", "kr"),
+            ("Monthly Amortering", "monthly_emi", "kr"),
+            ("Debt-to-Income", "debt_to_income", "%"),
+            ("DSCR", "dscr", "x"),
+            ("Working Capital", "working_capital", "kr"),
+            ("Operating Margin", "operating_margin", "%"),
+            ("Revenue", "revenue", "kr"),
+            ("Net Income", "net_income", "kr"),
+            ("Recommendation", "recommendation", "text"),
+        ]:
+            b = before.get(key, 0)
+            a = after.get(key, 0)
+            c = changes.get(key, 0)
+
+            if fmt == "%":
+                b_str = f"{b:.1%}" if isinstance(b, (int, float)) else str(b)
+                a_str = f"{a:.1%}" if isinstance(a, (int, float)) else str(a)
+                c_str = f"{c:+.1%}" if isinstance(c, (int, float)) else str(c)
+            elif fmt == "x":
+                b_str = f"{b:.2f}x" if isinstance(b, (int, float)) else str(b)
+                a_str = f"{a:.2f}x" if isinstance(a, (int, float)) else str(a)
+                c_str = f"{c:+.2f}x" if isinstance(c, (int, float)) else str(c)
+            elif fmt == "kr":
+                b_str = f"{b:,.0f} kr" if isinstance(b, (int, float)) else str(b)
+                a_str = f"{a:,.0f} kr" if isinstance(a, (int, float)) else str(a)
+                c_str = f"{c:+,.0f} kr" if isinstance(c, (int, float)) else str(c)
+            else:
+                b_str = str(b)
+                a_str = str(a)
+                c_str = str(c)
+
+            # Change color
+            if isinstance(c, (int, float)) and fmt != "text":
+                if "debt" in key.lower() or "dti" in key.lower():
+                    # Lower is better for debt metrics
+                    color = "#c62828" if c > 0 else "#2e7d32" if c < 0 else "#666"
+                else:
+                    color = "#2e7d32" if c > 0 else "#c62828" if c < 0 else "#666"
+            else:
+                color = "#f57f17" if a_str != b_str else "#666"
+
+            comp_data.append({
+                "Metric": label, "Before": b_str, "After": a_str,
+                "Change": f"<span style='color:{color};font-weight:700'>{c_str}</span>",
+            })
+
+        df = pd.DataFrame(comp_data)
+        st.markdown(df.to_html(escape=False, index=False), unsafe_allow_html=True)
+
+        # Risk change and narrative
+        risk_change = sim_result.get("risk_change", "unchanged")
+        icon = "🔴" if risk_change == "worsened" else "🟢" if risk_change == "improved" else "🟡"
+        st.markdown(f"### {icon} Overall Impact: {risk_change.title()}")
+
+        rec = sim_result.get("recommendation", "")
+        if rec:
+            st.info(rec)
+
+    # ---- Scenario History ----
+    st.markdown("---")
+    past = fetch_json(f"/farmers/{FARMER_ID}/scenarios")
+    if past and len(past) > 0:
+        st.markdown("### 📜 Previous Simulations")
+        for s in past[:5]:
             change = s.get("risk_change", "unchanged")
             icon = "🔴" if change == "worsened" else "🟢" if change == "improved" else "🟡"
-
-            with st.expander(f"{s['scenario_name']} — {icon} {change.title()}", expanded=(scenarios.index(s) == 0)):
-                if comp and comp.get("current", {}).get("dscr"):
-                    cur = comp.get("current", {})
-                    aft = comp.get("scenario", {})
-
-                    col1, col2, col3 = st.columns([2, 0.2, 2])
-                    with col1:
-                        st.markdown("**⬅️ Before**")
-                        st.metric("DTI", f"{cur['debt_to_income']:.1%}" if cur.get('debt_to_income') else "N/A")
-                        st.metric("DSCR", f"{cur['dscr']:.2f}x" if cur.get('dscr') else "N/A")
-                        st.metric("Risk", cur.get('overall_risk', 'N/A').title())
-                    with col2:
-                        st.markdown("<div style='font-size:2rem;text-align:center;padding-top:2rem;'>→</div>", unsafe_allow_html=True)
-                    with col3:
-                        st.markdown("**After ➡️**")
-                        delta_dti = f"{aft['debt_to_income']:.1%}" if aft.get('debt_to_income') else "N/A"
-                        delta_dscr = f"{aft['dscr']:.2f}x" if aft.get('dscr') else "N/A"
-                        st.metric("DTI", delta_dti)
-                        st.metric("DSCR", delta_dscr)
-                        r = aft.get("overall_risk", "N/A")
-                        rc = "#2e7d32" if r == "improved" else "#c62828" if r == "worsened" else "#666"
-                        st.markdown(f"**Risk:** <span style='color:{rc};font-weight:700'>{r.title()}</span>", unsafe_allow_html=True)
-                else:
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        st.metric("DTI", f"{s.get('new_debt_to_income', 0):.1%}" if s.get('new_debt_to_income') else "N/A")
-                    with col2:
-                        st.metric("DSCR", f"{s.get('new_dscr', 0):.2f}x" if s.get('new_dscr') else "N/A")
-                    with col3:
-                        st.markdown(f"**Risk Impact:** {icon} {change.title()}")
-
-                rec = s.get("recommendation")
-                if rec:
-                    st.info(rec)
+            with st.expander(f"{icon} {s['scenario_name']}"):
+                st.caption(s.get("recommendation", ""))
     else:
-        st.info("No scenarios run yet. Select a scenario above and click 'Run Scenario'.")
+        st.caption("No previous simulations yet.")
 
 
 # ===========================================================================
