@@ -2,7 +2,7 @@
 title: AgriSense AI
 emoji: 🌱
 colorFrom: green
-colorTo: amber
+colorTo: yellow
 sdk: streamlit
 sdk_version: 1.36.0
 python_version: "3.11"
