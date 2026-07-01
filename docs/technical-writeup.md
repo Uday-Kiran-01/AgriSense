@@ -242,46 +242,24 @@ Each scenario modifies external conditions (drought index, commodity prices, int
 
 ## 8. System Architecture
 
+```mermaid
+graph TB
+    subgraph Users["👥 Users"]
+        Farmer["👨‍🌾 Farmer"] --> UI
+        Analyst["🏢 Analyst"] --> UI
+        Bank["🏦 Bank Officer"] --> UI
+    end
+    UI["🖥️ Streamlit<br/>HF Spaces"] --> API["⚙️ FastAPI<br/>:8000"]
+    API --> R["Routers<br/>farmers/analysis/ml"]
+    R --> S["Services<br/>16 modules"]
+    S --> DB[("SQLite<br/>WAL")]
+    S --> EXT["🌐 SMHI·EU·FAO·Eurostat"]
+    S --> ML["🌲 RF×3<br/>Risk+Repay+Capacity"]
+    ML --> SHAP["🔍 SHAP"]
+    SHAP --> Gemini["📝 Gemini Memo"]
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    USER INTERFACES                       │
-│  ┌──────────┐  ┌──────────────┐  ┌──────────────────┐  │
-│  │  Farmer   │  │Credit Analyst│  │   Bank Officer   │  │
-│  │  Wizard   │  │  Pipeline    │  │   Decision View  │  │
-│  └────┬─────┘  └──────┬───────┘  └────────┬─────────┘  │
-│       │               │                   │             │
-│       └───────────────┼───────────────────┘             │
-│                       │                                 │
-│              Streamlit / FastAPI                        │
-└───────────────────────┼─────────────────────────────────┘
-                        │
-┌───────────────────────┼─────────────────────────────────┐
-│                 FASTAPI BACKEND                          │
-│  ┌───────────────────┼──────────────────────────────┐   │
-│  │                  Routers                          │   │
-│  │  farmers.py  │  analysis.py  │  ml.py            │   │
-│  └───────────────────┼──────────────────────────────┘   │
-│  ┌───────────────────┼──────────────────────────────┐   │
-│  │                 Services                           │   │
-│  │  financial    │  ml_service   │  scenario         │   │
-│  │  liquidity    │  peer_bench   │  decision_readiness│  │
-│  │  external_data│  shap         │  gemini           │   │
-│  │  evaluation   │  preprocessing │  environmental    │   │
-│  └───────────────────┼──────────────────────────────┘   │
-│  ┌───────────────────┼──────────────────────────────┐   │
-│  │              Models (SQLAlchemy)                   │   │
-│  │  Farmer │ Loan │ Financial │ Operational │ Ext    │   │
-│  │  Prediction │ Scenario │ Memo │ Document         │   │
-│  └───────────────────────────────────────────────────┘   │
-│                     │                                     │
-│              SQLite (WAL mode)                            │
-└─────────────────────┼───────────────────────────────────┘
-                      │
-┌─────────────────────┼───────────────────────────────────┐
-│               EXTERNAL DATA                              │
-│  SMHI (Weather) │ EU Agri-Food │ FAOSTAT │ Eurostat     │
-└─────────────────────────────────────────────────────────┘
-```
+
+> **View live diagram:** [github.com/Uday-Kiran-01/AgriSense/blob/main/docs/architecture.md](https://github.com/Uday-Kiran-01/AgriSense/blob/main/docs/architecture.md)
 
 ---
 

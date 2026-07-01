@@ -1,121 +1,127 @@
 # AgriSense AI — Architecture Overview
 
-```
-┌────────────────────────────────────────────────────────────────────┐
-│                        USERS & INTERFACES                          │
-│                                                                    │
-│  ┌──────────────┐   ┌──────────────────┐   ┌──────────────────┐   │
-│  │   👨‍🌾 Farmer   │   │  🏢 Credit Analyst │   │  🏦 Bank Officer  │   │
-│  │  5-step wizard│   │  Pipeline review │   │  Final decision  │   │
-│  │  My farm, my  │   │  Filter, analyze,│   │  Approve/Condition│  │
-│  │  application  │   │  generate memo   │   │  /Reject          │   │
-│  └──────┬───────┘   └────────┬─────────┘   └────────┬─────────┘   │
-│         │                    │                      │              │
-│         └────────────────────┼──────────────────────┘              │
-│                              │                                     │
-│                   Streamlit (port 8501)                            │
-│                   HuggingFace Spaces                               │
-└──────────────────────────────┼─────────────────────────────────────┘
-                               │
-                               │ HTTP/REST
-                               │
-┌──────────────────────────────┼─────────────────────────────────────┐
-│                     FASTAPI BACKEND (port 8000)                     │
-│                                                                     │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │                        ROUTERS                               │   │
-│  │  ┌──────────────┐  ┌──────────────────┐  ┌──────────────┐   │   │
-│  │  │  farmers.py  │  │   analysis.py    │  │    ml.py     │   │   │
-│  │  │  10 routes   │  │    20 routes     │  │  4 routes    │   │   │
-│  │  │  CRUD + data │  │  Predict, SHAP,  │  │  Evaluate,   │   │   │
-│  │  │  + external  │  │  Scenarios, Memos│  │  Retrain     │   │   │
-│  │  └──────────────┘  └──────────────────┘  └──────────────┘   │   │
-│  └─────────────────────────────────────────────────────────────┘   │
-│                                                                     │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │                       SERVICES (16)                           │   │
-│  │                                                               │   │
-│  │  ┌─────────────┐ ┌──────────────┐ ┌──────────────────┐       │   │
-│  │  │ financial   │ │ ml_service   │ │ scenario         │       │   │
-│  │  │ _analysis   │ │ RF × 3       │ │ _analysis        │       │   │
-│  │  │ DSCR, DTI.. │ │ Train+Predict│ │ What-if simulator│       │   │
-│  │  └─────────────┘ └──────────────┘ └──────────────────┘       │   │
-│  │                                                               │   │
-│  │  ┌─────────────┐ ┌──────────────┐ ┌──────────────────┐       │   │
-│  │  │ liquidity   │ │ peer_bench   │ │ decision         │       │   │
-│  │  │ Seasonal CF │ │ Percentile   │ │ _readiness       │       │   │
-│  │  │ Stress test │ │ comparisons  │ │ Evidence quality │       │   │
-│  │  └─────────────┘ └──────────────┘ └──────────────────┘       │   │
-│  │                                                               │   │
-│  │  ┌─────────────┐ ┌──────────────┐ ┌──────────────────┐       │   │
-│  │  │ external    │ │ shap         │ │ gemini           │       │   │
-│  │  │ _data       │ │ _explainer   │ │ _service         │       │   │
-│  │  │ SMHI, EU... │ │ Per-predict  │ │ Decision memos   │       │   │
-│  │  └─────────────┘ └──────────────┘ └──────────────────┘       │   │
-│  │                                                               │   │
-│  │  ┌─────────────┐ ┌──────────────┐ ┌──────────────────┐       │   │
-│  │  │ evaluation  │ │ preprocessing│ │ environmental    │       │   │
-│  │  │ 1K unseen   │ │ Validation   │ │ _score           │       │   │
-│  │  │ + metrics   │ │ + Cleaning   │ │ Drought + price  │       │   │
-│  │  └─────────────┘ └──────────────┘ └──────────────────┘       │   │
-│  │                                                               │   │
-│  │  ┌─────────────┐ ┌──────────────┐ ┌──────────────────┐       │   │
-│  │  │ model_      │ │ feature_      │ │ synthetic        │       │   │
-│  │  │ benchmark   │ │ engineering   │ │ _generator       │       │   │
-│  │  │ 5-model cmp │ │ Train/Test/   │ │ 2500 farmers     │       │   │
-│  │  └─────────────┘ │ GridSearch    │ └──────────────────┘       │   │
-│  │                  └──────────────┘                             │   │
-│  └─────────────────────────────────────────────────────────────┘   │
-│                                                                     │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │                     DATA LAYER                                │   │
-│  │  ┌──────────────────────┐  ┌─────────────────────────────┐   │   │
-│  │  │  SQLAlchemy ORM      │  │  External APIs              │   │   │
-│  │  │  9 models, WAL mode  │  │  SMHI · EU Agri-Food        │   │   │
-│  │  │  SQLite -> PostgreSQL│  │  FAOSTAT · Eurostat         │   │   │
-│  │  └──────────────────────┘  └─────────────────────────────┘   │   │
-│  └─────────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────────┘
+> View on [GitHub](https://github.com/Uday-Kiran-01/AgriSense/blob/main/docs/architecture.md) for live Mermaid diagrams.  
+> Export to PDF/PNG: copy any diagram block into [mermaid.live](https://mermaid.live)
+
+---
+
+## System Architecture
+
+```mermaid
+graph TB
+    subgraph Users["👥 Users"]
+        Farmer["👨‍🌾 Farmer<br/>5-step wizard"]
+        Analyst["🏢 Credit Analyst<br/>Pipeline review"]
+        Bank["🏦 Bank Officer<br/>Final decision"]
+    end
+
+    subgraph Frontend["🖥️ Streamlit Frontend"]
+        UI["Streamlit App<br/>Port 8501<br/>HF Spaces"]
+    end
+
+    subgraph Backend["⚙️ FastAPI Backend :8000"]
+        subgraph Routers["Routes (34 endpoints)"]
+            FR["farmers.py"]
+            AR["analysis.py"]
+            MR["ml.py"]
+        end
+
+        subgraph Services["Services (16)"]
+            FA["financial_analysis"]
+            ML["ml_service RFx3"]
+            SC["scenario_analysis"]
+            LQ["liquidity"]
+            PB["peer_benchmark"]
+            DR["decision_readiness"]
+            ED["external_data"]
+            SH["shap_explainer"]
+            GM["gemini_service"]
+            EV["evaluation"]
+            PP["preprocessing"]
+            ES["environmental_score"]
+        end
+
+        subgraph Data["Data Layer"]
+            DB[("SQLite WAL<br/>9 models")]
+            ORM["SQLAlchemy ORM"]
+        end
+    end
+
+    subgraph External["🌐 External APIs"]
+        SMHI["SMHI Weather"]
+        EU["EU Agri-Food"]
+        FAO["FAOSTAT"]
+        ESTAT["Eurostat"]
+    end
+
+    Farmer --> UI
+    Analyst --> UI
+    Bank --> UI
+    UI --> Routers
+    Routers --> Services
+    Services --> ORM
+    ORM --> DB
+    ED --> SMHI
+    ED --> EU
+    ED --> FAO
+    ED --> ESTAT
+    ML --> SH
+    SH --> GM
 ```
 
-## Deployment
-
-```
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│   Local Dev      │     │   Docker          │     │   Cloud          │
-│                  │     │                   │     │                  │
-│  streamlit run   │     │  docker-compose   │     │  HuggingFace     │
-│  uvicorn main    │     │  FastAPI :8000    │     │  Spaces          │
-│                  │     │  Streamlit :8501  │     │  (Streamlit SDK) │
-└─────────────────┘     └──────────────────┘     └─────────────────┘
-```
+---
 
 ## Data Flow
 
+```mermaid
+flowchart LR
+    A["📄 Docs"] --> B["✅ Validate"]
+    B --> C["🧹 Clean"]
+    C --> D["📐 Ratios<br/>DSCR DTI LTV"]
+    D --> E["🔢 Features<br/>15 engineered"]
+    E --> F["🌲 RF Model<br/>Risk+Repay+Capacity"]
+    F --> G["📊 Risk Score"]
+    G --> H["🔍 SHAP"]
+    H --> I["📝 Memo<br/>Gemini AI"]
+    I --> J["👤 Human Decision"]
+
+    K["🌦️ Weather<br/>SMHI"] --> E
+    L["📉 Commodity<br/>EU Agri-Food"] --> E
 ```
-Documents ──> Validation ──> Cleaning ──> Ratios ──> Features ──> RF Model ──> Risk Score
-                                                          │
-External APIs ──> Weather/Commodity ─────────────────────┘
-                                                          │
-                                                          ▼
-                                                    SHAP Explanation
-                                                          │
-                                                          ▼
-                                                    Decision Memo
-                                                          │
-                                                          ▼
-                                                    Human Decision
+
+---
+
+## Deployment
+
+```mermaid
+flowchart TB
+    subgraph Local["💻 Local"]
+        L1["streamlit run"]
+        L2["uvicorn main"]
+    end
+    subgraph Docker["🐳 Docker"]
+        D1["docker-compose up"]
+        D2["FastAPI :8000"]
+        D3["Streamlit :8501"]
+    end
+    subgraph Cloud["☁️ Cloud"]
+        C1["HF Spaces"]
+        C2["GitHub"]
+    end
+    Local --> Docker --> Cloud
 ```
+
+---
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | Streamlit 1.36 |
-| Backend | FastAPI (Python 3.11) |
-| ML | scikit-learn Random Forest × 3 |
-| Explainability | SHAP + Gemini AI |
-| Database | SQLite (WAL) + SQLAlchemy ORM |
-| Container | Docker + docker-compose |
-| Deployment | HuggingFace Spaces + GitHub |
-| External APIs | SMHI, EU Agri-Food, FAOSTAT, Eurostat |
+| Layer | Technology | Why |
+|-------|-----------|-----|
+| Frontend | Streamlit 1.36 | Rapid prototyping, Python-native |
+| Backend | FastAPI 3.11 | Async, OpenAPI, API-first |
+| ML | scikit-learn RF × 3 | Explainable, tabular data |
+| Explainability | SHAP + Gemini AI | Per-prediction + plain language |
+| Database | SQLite WAL + SQLAlchemy | Simple, replaceable |
+| Container | Docker compose | Reproducible |
+| Deploy | HF Spaces + GitHub | Free, auto-rebuild |
+| APIs | SMHI, EU, FAOSTAT, Eurostat | Real Swedish/EU data |
