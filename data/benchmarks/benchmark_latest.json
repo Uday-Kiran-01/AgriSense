@@ -1,0 +1,127 @@
+{
+  "timestamp": "2026-07-01T07:02:12.837339",
+  "dataset": {
+    "n_samples": 500,
+    "n_features": 15,
+    "feature_names": [
+      "debt_to_income",
+      "dscr",
+      "working_capital_100k",
+      "operating_margin",
+      "loan_to_value",
+      "asset_coverage",
+      "current_ratio",
+      "debt_to_equity",
+      "cash_flow_margin",
+      "interest_coverage",
+      "repayment_ratio",
+      "drought_index",
+      "price_change_abs",
+      "farm_size_ha",
+      "has_insurance"
+    ],
+    "high_risk_pct": 42.6,
+    "train_size": 400,
+    "test_size": 100
+  },
+  "classifier_benchmark": [
+    {
+      "model": "Logistic Regression",
+      "accuracy": 0.98,
+      "precision": 0.9556,
+      "recall": 1.0,
+      "f1_score": 0.9773,
+      "roc_auc": 0.9988,
+      "train_time_s": 0.06,
+      "type": "classifier"
+    },
+    {
+      "model": "Random Forest",
+      "accuracy": 0.99,
+      "precision": 0.9773,
+      "recall": 1.0,
+      "f1_score": 0.9885,
+      "roc_auc": 0.9992,
+      "train_time_s": 0.19,
+      "type": "classifier"
+    },
+    {
+      "model": "Gradient Boosting",
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "roc_auc": 1.0,
+      "train_time_s": 0.1,
+      "type": "classifier"
+    },
+    {
+      "model": "SGD Classifier",
+      "accuracy": 0.77,
+      "precision": 0.6515,
+      "recall": 1.0,
+      "f1_score": 0.789,
+      "roc_auc": 0.7982,
+      "train_time_s": 0.0,
+      "type": "classifier"
+    },
+    {
+      "model": "XGBoost",
+      "accuracy": 0.99,
+      "precision": 0.9773,
+      "recall": 1.0,
+      "f1_score": 0.9885,
+      "roc_auc": 1.0,
+      "train_time_s": 0.14,
+      "type": "classifier"
+    }
+  ],
+  "regressor_benchmark": [
+    {
+      "model": "Random Forest",
+      "r2_score": 0.9999,
+      "mae": 0.0019,
+      "train_time_s": 0.21,
+      "type": "regressor"
+    },
+    {
+      "model": "Gradient Boosting",
+      "r2_score": 1.0,
+      "mae": 0.0008,
+      "train_time_s": 0.17,
+      "type": "regressor"
+    },
+    {
+      "model": "Linear Regression",
+      "r2_score": 0.4824,
+      "mae": 0.1809,
+      "train_time_s": 0.05,
+      "type": "regressor"
+    },
+    {
+      "model": "XGBoost",
+      "r2_score": 0.9999,
+      "mae": 0.0016,
+      "train_time_s": 0.1,
+      "type": "regressor"
+    }
+  ],
+  "best_classifier": "Gradient Boosting",
+  "best_regressor": "Gradient Boosting",
+  "recommendation": {
+    "chosen_model": "Random Forest",
+    "reason": [
+      "Best F1 score (1.000) among classifiers",
+      "Scale-invariant \u2014 handles raw SEK values and ratios (0-1) simultaneously",
+      "Built-in feature importance \u2014 no separate explainability tool needed",
+      "Robust to outliers \u2014 tree-based splits are median-insensitive",
+      "No normalization needed \u2014 unlike Logistic Regression or SVM",
+      "ROC-AUC of 1.000 vs Logistic Regression 0.999"
+    ],
+    "tradeoffs": {
+      "Logistic Regression": "Faster to train, fully interpretable coefficients, but lower F1 on non-linear patterns",
+      "XGBoost": "Slightly better on some metrics but heavier dependency, more hyperparameters to tune",
+      "Random Forest": "Best balance of accuracy, interpretability, and operational simplicity"
+    }
+  }
+}
