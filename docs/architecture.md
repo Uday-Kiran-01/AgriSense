@@ -1,4 +1,4 @@
-# AgriSense AI — Architecture Overview
+# AgriSense AI - Architecture Overview
 
 > View on [GitHub](https://github.com/Uday-Kiran-01/AgriSense/blob/main/docs/architecture.md) for live Mermaid diagrams.  
 > Export to PDF/PNG: copy any diagram block into [mermaid.live](https://mermaid.live)

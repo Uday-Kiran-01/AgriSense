@@ -11,7 +11,7 @@
 
 ## 1. Problem Statement
 
-Agricultural lending in Sweden involves fragmented data sources: financial statements in varying formats, operational records across different units, and environmental data from multiple government agencies. Credit officers manually assemble this information into lending decisions—a process that is slow, opaque, and inconsistent.
+Agricultural lending in Sweden involves fragmented data sources: financial statements in varying formats, operational records across different units, and environmental data from multiple government agencies. Credit officers manually assemble this information into lending decisions-a process that is slow, opaque, and inconsistent.
 
 The core challenge is not prediction accuracy. It is **transparency**. A farmer rejected for a loan needs to understand why. A bank officer approving a loan needs auditable reasoning. An analyst preparing a credit package needs the evidence assembled, not replaced.
 
@@ -20,7 +20,7 @@ This project builds a decision support platform that:
 - **Combines** financial, operational, and environmental data into a unified risk profile
 - **Explains** every prediction with feature contributions and plain-language summaries
 - **Simulates** investment and stress scenarios to inform decisions
-- **Keeps humans in the loop** — AI prepares evidence, humans make the final call
+- **Keeps humans in the loop** - AI prepares evidence, humans make the final call
 
 ---
 
@@ -28,7 +28,7 @@ This project builds a decision support platform that:
 
 ### Explainability over Complexity
 
-Financial decisions require trust. Rather than maximizing predictive accuracy using opaque models, the system separates **deterministic financial calculations** from **statistical prediction**. Financial ratios (DSCR, DTI, operating margin) remain transparent and auditable. Machine learning augments—not replaces—financial reasoning.
+Financial decisions require trust. Rather than maximizing predictive accuracy using opaque models, the system separates **deterministic financial calculations** from **statistical prediction**. Financial ratios (DSCR, DTI, operating margin) remain transparent and auditable. Machine learning augments-not replaces-financial reasoning.
 
 ### Modular Architecture
 
@@ -36,7 +36,7 @@ Every component is independently replaceable. Today the system uses mock bank AP
 
 ### Human-in-the-Loop
 
-The AI never approves loans. It prepares evidence: financial ratios, risk estimates, SHAP explanations, scenario impacts, and a plain-language decision memo. A human credit analyst reviews the package. A human bank officer makes the final decision. This is not a limitation—it is the design.
+The AI never approves loans. It prepares evidence: financial ratios, risk estimates, SHAP explanations, scenario impacts, and a plain-language decision memo. A human credit analyst reviews the package. A human bank officer makes the final decision. This is not a limitation-it is the design.
 
 ### Data Quality Before Modelling
 
@@ -104,9 +104,9 @@ Random Forest was selected because it aligns with the explainability requirement
 
 Three separate Random Forest models, each specialized:
 
-1. **Credit Risk Classifier** — Probability of default (binary classification)
-2. **Repayment Probability Regressor** — Likelihood of full repayment (0-1)
-3. **Debt Capacity Regressor** — Maximum sustainable loan amount (SEK)
+1. **Credit Risk Classifier** - Probability of default (binary classification)
+2. **Repayment Probability Regressor** - Likelihood of full repayment (0-1)
+3. **Debt Capacity Regressor** - Maximum sustainable loan amount (SEK)
 
 This separation allows independent retraining, versioning, and explanation of each model.
 
@@ -134,7 +134,7 @@ This separation allows independent retraining, versioning, and explanation of ea
 
 ### Label Generation (Honest Assessment)
 
-Current labels are generated from DSCR and DTI thresholds. This creates an inherent circularity: the same features that generate labels also dominate model predictions. This is not a bug—it is a documented limitation of synthetic data. In production, labels would come from historical loan outcomes, breaking the circular dependency.
+Current labels are generated from DSCR and DTI thresholds. This creates an inherent circularity: the same features that generate labels also dominate model predictions. This is not a bug-it is a documented limitation of synthetic data. In production, labels would come from historical loan outcomes, breaking the circular dependency.
 
 ---
 
@@ -167,7 +167,7 @@ This simulates deployment on a population the model has never seen.
 | False Positives | 3 |
 | False Negatives | 196 |
 
-**Interpretation:** High precision (99.4%) means few false alarms—when the model flags a farmer as high-risk, it is almost always correct. Lower recall (70.9%) means some high-risk farmers go undetected. In lending, false negatives (missed defaults) are more expensive than false positives (lost business). This is a deliberate trade-off documented in the model card.
+**Interpretation:** High precision (99.4%) means few false alarms-when the model flags a farmer as high-risk, it is almost always correct. Lower recall (70.9%) means some high-risk farmers go undetected. In lending, false negatives (missed defaults) are more expensive than false positives (lost business). This is a deliberate trade-off documented in the model card.
 
 ### Stress Testing (5 Scenarios, 500 Farmers Each)
 
@@ -221,7 +221,7 @@ Each farmer is compared against peers in the same region, crop family, and farm 
 
 ## 7. Scenario Analysis
 
-Scenario analysis is treated as **decision support, not prediction**. The system does not tell the farmer what will happen—it shows what could happen under different assumptions.
+Scenario analysis is treated as **decision support, not prediction**. The system does not tell the farmer what will happen-it shows what could happen under different assumptions.
 
 ### Investment Simulator
 
@@ -274,7 +274,7 @@ graph TB
 | Docker | Reproducible deployment across environments |
 | Synthetic Data | GDPR-safe demonstration without real farmers |
 | SHAP | Per-prediction feature contributions |
-| Gemini AI | Natural-language explanations only—never financial calculations |
+| Gemini AI | Natural-language explanations only-never financial calculations |
 | Three separate models | Independent retraining, versioning, and explanation |
 | Deterministic ratios + ML | Separation of auditable calculations from statistical inference |
 
@@ -299,7 +299,7 @@ graph TB
 
 ### What Surprised Me
 
-The most important finding was not the accuracy metrics. It was that **Drought Index dominates all financial ratios combined** (28.6% vs. 17.8% for the next highest feature). This means environmental data is not supplementary—it is central to agricultural credit risk. Traditional credit scoring that ignores weather is missing the single most important predictor.
+The most important finding was not the accuracy metrics. It was that **Drought Index dominates all financial ratios combined** (28.6% vs. 17.8% for the next highest feature). This means environmental data is not supplementary-it is central to agricultural credit risk. Traditional credit scoring that ignores weather is missing the single most important predictor.
 
 ---
 
