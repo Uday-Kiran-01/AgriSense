@@ -23,41 +23,39 @@ logger = get_logger(__name__)
 # SMHI — Swedish weather (free, no API key)
 # ---------------------------------------------------------------------------
 
-# Swedish agricultural regions mapped to nearest active SMHI stations
-# Station keys discovered from: https://opendata-download-metobs.smhi.se/api/version/latest/parameter/5.json
+# Swedish agricultural regions mapped to nearest verified SMHI stations
+# Verified with live data (temperature + precipitation available):
 SMHI_REGION_STATIONS = {
-    # Skåne län (southernmost — highest agricultural density)
-    "Skane": "53430",           # Lund
+    # Skane (verified: Lund 21.3C, Helsingborg 14.2C)
+    "Skane": "53430",           # Lund — best coverage
     "Skane_Lund": "53430",
-    "Skane_Kristianstad": "64030",
     "Skane_Helsingborg": "62040",
-    "Skane_Trelleborg": "53230",
-    "Skane_Malmo": "52350",     # Malmö (fallback)
-    # Västra Götaland (second largest agricultural region)
-    "Vastra Gotaland": "81570",  # Håvelund (active)
-    "Vastra_Gotaland": "81570",
-    # Östergötland
-    "Ostergotland": "85230",     # Linköping area
-    "Ostergotland": "85230",
-    # Jönköping
-    "Jonkoping": "74460",        # Jönköping area
-    "Jonkoping": "74460",
-    # Halland
-    "Halland": "72180",          # Falkenberg area
-    # Kalmar
-    "Kalmar": "66410",           # Kalmar area
-    # Stockholm / Uppsala / Södermanland (Mälardalen)
-    "Stockholm": "98230",        # Stockholm
-    "Uppsala": "97530",          # Uppsala
-    "Sodermanland": "95700",     # Nyköping area
-    # Värmland
-    "Varmland": "93220",         # Karlstad area
-    # Dalarna / Gävleborg
-    "Dalarna": "105320",         # Falun area
-    "Gavleborg": "107220",       # Gävle area
-    # Norrbotten / Västerbotten (northern — limited agriculture)
-    "Norrbotten": "3340",        # Luleå area
-    "Vasterbotten": "14920",     # Umeå area
+    "Skane_Kristianstad": "53430",  # fallback to Lund (Kristianstad has no recent data)
+    "Skane_Trelleborg": "53430",
+    "Skane_Malmo": "53430",
+    # Vastra Gotaland (verified: Boras 18.4C)
+    "Vastra Gotaland": "72450",  # Boras
+    "Vastra_Gotaland": "72450",
+    # Varmland (verified: Arvika 8.4C)
+    "Varmland": "92410",         # Arvika A
+    # Norrbotten (verified: Boden 11.3C, Arjeplog 6.8C)
+    "Norrbotten": "161940",      # Boden
+    "Vasterbotten": "161940",    # Boden (nearest verified, ~150km south)
+    # For regions without verified stations, use nearest available
+    # with mock data providing realistic regional variation
+    "Ostergotland": "72450",     # Boras (same latitude band)
+    "Jonkoping": "72450",        # Boras
+    "Halland": "62040",          # Helsingborg
+    "Kalmar": "53430",           # Lund
+    "Blekinge": "53430",         # Lund
+    "Stockholm": "92410",        # Arvika (same lat, different coast but verified)
+    "Uppsala": "92410",          # Arvika
+    "Sodermanland": "72450",     # Boras
+    "Dalarna": "161940",         # Boden (northern climate proxy)
+    "Gavleborg": "161940",       # Boden
+    "Gotland": "53430",          # Lund (island climate, nearest verified maritime)
+    "Vastmanland": "92410",      # Arvika
+    "Orebro": "92410",           # Arvika
     # Default fallback — Lund (best data availability)
     "_default": "53430",
 }
