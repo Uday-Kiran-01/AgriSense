@@ -632,7 +632,7 @@ def farmer_wizard():
 
     if step == 1:
         cf = current_farmer()
-        st.markdown(f"## 👋 Welcome, {cf[chr(39)+chr(110)+chr(97)+chr(109)+chr(101)+chr(39)]}")
+        st.markdown(f"## 👋 Welcome, {cf['name']}")
         st.markdown("Let's prepare your financing application.")
         c1,c2,c3 = st.columns(3)
         with c1: st.metric("Farm", f"{cf.get('ha',85)} ha")
