@@ -1,5 +1,5 @@
 """
-ScenarioResult model — stores "what-if" scenario analysis results.
+ScenarioResult model - stores "what-if" scenario analysis results.
 """
 from datetime import datetime
 

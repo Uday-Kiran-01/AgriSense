@@ -124,7 +124,7 @@ def run_batch_inference(farmers_data: list[dict]) -> list[dict]:
             debt_cap = max(0, float(cap_model.predict(features)[0]))
 
             # Determine ground truth (probabilistic, from profile)
-            # The model never sees this — it's only for evaluation
+            # The model never sees this - it's only for evaluation
             dti = _safe_float(ratios.get("debt_to_income", 0))
             dscr = _safe_float(ratios.get("dscr", 1))
             uc = farmer.get("cibil_score", 600)

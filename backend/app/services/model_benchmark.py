@@ -222,10 +222,10 @@ def run_model_benchmark(n_farmers: int = 500, seed: int = 42) -> dict:
             "chosen_model": "Random Forest",
             "reason": [
                 f"Best F1 score ({best_clf['f1_score']:.3f}) among classifiers",
-                "Scale-invariant — handles raw SEK values and ratios (0-1) simultaneously",
-                "Built-in feature importance — no separate explainability tool needed",
-                "Robust to outliers — tree-based splits are median-insensitive",
-                "No normalization needed — unlike Logistic Regression or SVM",
+                "Scale-invariant - handles raw SEK values and ratios (0-1) simultaneously",
+                "Built-in feature importance - no separate explainability tool needed",
+                "Robust to outliers - tree-based splits are median-insensitive",
+                "No normalization needed - unlike Logistic Regression or SVM",
                 f"ROC-AUC of {best_clf['roc_auc']:.3f} vs Logistic Regression {next(r['roc_auc'] for r in clf_results if r['model']=='Logistic Regression'):.3f}",
             ],
             "tradeoffs": {
@@ -255,7 +255,7 @@ def print_benchmark_table(result: dict):
     """Pretty-print the benchmark results."""
     print()
     print("=" * 85)
-    print("  MULTI-MODEL BENCHMARK — Credit Risk Classification")
+    print("  MULTI-MODEL BENCHMARK - Credit Risk Classification")
     print("=" * 85)
     print(f"  {'Model':<25} {'Acc':>7} {'Prec':>7} {'Rec':>7} {'F1':>7} {'ROC':>7} {'Time':>7}")
     print("  " + "-" * 75)

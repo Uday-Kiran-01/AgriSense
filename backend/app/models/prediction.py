@@ -1,5 +1,5 @@
 """
-Prediction model — stores ML model predictions for each farmer.
+Prediction model - stores ML model predictions for each farmer.
 """
 from datetime import datetime
 

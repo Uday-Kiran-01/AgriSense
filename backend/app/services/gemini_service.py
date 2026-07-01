@@ -1,5 +1,5 @@
 """
-Gemini AI Service — handles document summarization, metric explanations,
+Gemini AI Service - handles document summarization, metric explanations,
 and decision memo generation. Gemini NEVER makes lending decisions.
 """
 import google.generativeai as genai
@@ -16,7 +16,7 @@ if settings.gemini_available:
     gemini_model = genai.GenerativeModel("gemini-1.5-flash")
     logger.info("Gemini AI configured")
 else:
-    logger.warning("Gemini API key not set — using fallback text generation")
+    logger.warning("Gemini API key not set - using fallback text generation")
 
 
 def _generate(prompt: str, fallback: str = "") -> str:
@@ -53,22 +53,22 @@ def _rule_based_explanation(metric_name: str, value: float) -> str:
         "debt_to_income": (
             f"For every ₹100 earned, ₹{value * 100:.0f} goes toward loan payments. "
             f"Below 40% is comfortable; above 50% is tight. "
-            f"Think of it like setting aside grain for the mill — you need enough left for your household."
+            f"Think of it like setting aside grain for the mill - you need enough left for your household."
         ),
         "dscr": (
             f"The farm generates ₹{value:.1f} for every ₹1 of loan payment due. "
             f"Above 1.5 means comfortable coverage; below 1.25 means tight. "
-            f"It's like having enough fodder reserves — you want a buffer, not just enough."
+            f"It's like having enough fodder reserves - you want a buffer, not just enough."
         ),
         "operating_margin": (
             f"After all expenses, {value * 100:.0f}% of revenue remains as profit. "
             f"Above 25% is healthy for farming. "
-            f"Like crop yield per acre — higher is better, and consistency matters."
+            f"Like crop yield per acre - higher is better, and consistency matters."
         ),
         "loan_to_value": (
             f"Outstanding loans are {value * 100:.0f}% of total assets. "
             f"Below 50% is comfortable. "
-            f"It's like how much of your land is mortgaged — less is safer."
+            f"It's like how much of your land is mortgaged - less is safer."
         ),
     }
     return explanations.get(metric_name, f"{metric_name} is {value}. Consult a financial advisor for interpretation.")
@@ -156,7 +156,7 @@ This is a Swedish agricultural context. Use Swedish/EU terminology where appropr
         f"{context}\n\nBased on ALL the data above, write a 3-4 sentence overall assessment. "
         "Note: this is a decision-support recommendation, NOT a final lending decision. "
         "Summarize the key evidence supporting or cautioning against additional financing. "
-        "Use phrases like 'the data suggests' or 'the analysis indicates' — never 'I approve' or 'I deny'.",
+        "Use phrases like 'the data suggests' or 'the analysis indicates' - never 'I approve' or 'I deny'.",
         _fallback_recommendation(ml_prediction),
     )
 
@@ -170,7 +170,7 @@ This is a Swedish agricultural context. Use Swedish/EU terminology where appropr
     # Combine into full memo
     sections["full_memo"] = f"""
 {'='*60}
-                DECISION MEMO — {farmer_name}
+                DECISION MEMO - {farmer_name}
 {'='*60}
 
 FINANCIAL SUMMARY
@@ -279,26 +279,26 @@ def _fallback_recommendation(pred: dict) -> str:
         return (
             f"The analysis indicates elevated risk with a {repay:.0%} repayment probability. "
             f"Estimated additional debt capacity of {capacity:,.0f} kr. "
-            f"The data suggests caution — improving DSCR or reducing existing debt before additional "
+            f"The data suggests caution - improving DSCR or reducing existing debt before additional "
             f"financing would strengthen the application. Final decision rests with the loan officer."
         )
     else:
         return (
             f"The analysis indicates moderate risk with a {repay:.0%} repayment probability. "
             f"Estimated additional debt capacity of {capacity:,.0f} kr. "
-            f"The data suggests conditional consideration — mitigation measures such as crop insurance "
+            f"The data suggests conditional consideration - mitigation measures such as crop insurance "
             f"or partial collateral may improve the risk profile. Human review required."
         )
 
 
 def _fallback_evidence(ratios: dict, pred: dict) -> str:
     return (
-        f"* DSCR of {ratios.get('dscr', 0):.2f}x — {'above' if ratios.get('dscr', 0) > 1.25 else 'below'} the 1.25x minimum threshold\n"
-        f"* Debt-to-Income ratio of {ratios.get('debt_to_income', 0):.1%} — "
+        f"* DSCR of {ratios.get('dscr', 0):.2f}x - {'above' if ratios.get('dscr', 0) > 1.25 else 'below'} the 1.25x minimum threshold\n"
+        f"* Debt-to-Income ratio of {ratios.get('debt_to_income', 0):.1%} - "
         f"{'manageable' if ratios.get('debt_to_income', 0) < 0.5 else 'elevated'}\n"
-        f"* Loan-to-Value ratio of {ratios.get('loan_to_value', 0):.1%} — "
+        f"* Loan-to-Value ratio of {ratios.get('loan_to_value', 0):.1%} - "
         f"{'strong collateral position' if ratios.get('loan_to_value', 0) < 0.5 else 'moderate'}\n"
-        f"* Working capital of {ratios.get('working_capital', 0):,.0f} kr — "
+        f"* Working capital of {ratios.get('working_capital', 0):,.0f} kr - "
         f"{'adequate liquidity' if ratios.get('working_capital', 0) > 0 else 'liquidity concern'}\n"
-        f"* Model confidence: {pred.get('model_confidence', 0):.0%} — {pred.get('overall_financing_risk', 'N/A')} risk classification"
+        f"* Model confidence: {pred.get('model_confidence', 0):.0%} - {pred.get('overall_financing_risk', 'N/A')} risk classification"
     )

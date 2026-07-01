@@ -1,5 +1,5 @@
 """
-Investment Simulator — simulates investment decisions and their financial impact.
+Investment Simulator - simulates investment decisions and their financial impact.
 
 Answers Oscar's question:
 "How can scenario analysis help farmers understand the consequences
@@ -499,7 +499,7 @@ def run_combined_scenarios(
         ),
     }
 
-    logger.info(f"Investment Simulator: '{combined_name}' — "
+    logger.info(f"Investment Simulator: '{combined_name}' - "
                 f"DTI {old_dti:.1%}→{new_dti:.1%}, DSCR {old_dscr:.2f}→{new_dscr:.2f}, "
                 f"risk={risk_change}")
 
@@ -528,7 +528,7 @@ def _generate_investment_narrative(
         if new_dscr < 1.25:
             return (
                 f"⚠️ {name} significantly increases financial risk. "
-                f"DSCR drops from {old_dscr:.2f}x to {new_dscr:.2f}x — below the 1.25x minimum. "
+                f"DSCR drops from {old_dscr:.2f}x to {new_dscr:.2f}x - below the 1.25x minimum. "
                 f"Monthly debt service increases by {emi_change:+,.0f} kr. "
                 f"Consider a smaller loan, longer tenure, or additional collateral."
             )

@@ -2,10 +2,10 @@
 AgriSense AI Configuration
 Loads settings from .env file with sensible defaults.
 
-External data sources are FREE and PUBLIC — no API keys required:
-  - SMHI (Swedish Meteorological and Hydrological Institute) — weather
-  - EU Agri-Food Data Portal (European Commission) — commodity prices
-  - Gemini AI (Google) — decision memo generation (optional)
+External data sources are FREE and PUBLIC - no API keys required:
+  - SMHI (Swedish Meteorological and Hydrological Institute) - weather
+  - EU Agri-Food Data Portal (European Commission) - commodity prices
+  - Gemini AI (Google) - decision memo generation (optional)
 """
 import os
 from pathlib import Path
@@ -24,30 +24,30 @@ class Settings:
         "DATABASE_URL", f"sqlite:///{BASE_DIR / 'data' / 'agrisense.db'}"
     )
 
-    # Gemini AI (optional — falls back to rule-based if not configured)
+    # Gemini AI (optional - falls back to rule-based if not configured)
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
 
     # ---- Free Public APIs ----
 
-    # SMHI Open Data — Swedish weather (no API key required)
+    # SMHI Open Data - Swedish weather (no API key required)
     SMHI_BASE_URL: str = os.getenv(
         "SMHI_BASE_URL",
         "https://opendata-download-metobs.smhi.se/api/version/1.0",
     )
 
-    # EU Agri-Food Data Portal — commodity prices (no API key required)
+    # EU Agri-Food Data Portal - commodity prices (no API key required)
     EU_AGRIFOOD_BASE_URL: str = os.getenv(
         "EU_AGRIFOOD_BASE_URL",
         "https://api.tech.ec.europa.eu/agrifood",
     )
 
-    # FAOSTAT (UN FAO) — crop production, yield, producer prices (no API key required)
+    # FAOSTAT (UN FAO) - crop production, yield, producer prices (no API key required)
     FAOSTAT_BASE_URL: str = os.getenv(
         "FAOSTAT_BASE_URL",
         "https://fenixservices.fao.org/faostat/api/v2/en",
     )
 
-    # Eurostat — EU agricultural price indices (no API key required)
+    # Eurostat - EU agricultural price indices (no API key required)
     EUROSTAT_BASE_URL: str = os.getenv(
         "EUROSTAT_BASE_URL",
         "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data",

@@ -2,13 +2,13 @@
 Feature Engineering & ML Evaluation Pipeline
 
 Steps:
-  7. Feature Engineering — derived features
-  8. Feature Scaling — RF doesn't need it (documented)
-  9. Categorical Encoding — OneHot / Label
-  10. Train/Test Split — 80/20
-  11. Cross-Validation — 5-fold
-  12. Hyperparameter Search — GridSearchCV
-  13. Evaluation — Precision, Recall, F1, ROC-AUC, Confusion Matrix
+  7. Feature Engineering - derived features
+  8. Feature Scaling - RF doesn't need it (documented)
+  9. Categorical Encoding - OneHot / Label
+  10. Train/Test Split - 80/20
+  11. Cross-Validation - 5-fold
+  12. Hyperparameter Search - GridSearchCV
+  13. Evaluation - Precision, Recall, F1, ROC-AUC, Confusion Matrix
 """
 import json
 import os
@@ -37,17 +37,13 @@ logger = get_logger(__name__)
 MODEL_DIR = Path(settings.MODEL_PATH)
 MODEL_DIR.mkdir(parents=True, exist_ok=True)
 
-FEATURE_NAMES = [
-    "debt_to_income", "dscr", "working_capital_100k", "operating_margin",
-    "loan_to_value", "asset_coverage", "current_ratio", "debt_to_equity",
-    "cash_flow_margin", "interest_coverage", "repayment_ratio",
-    "drought_index", "price_change_abs", "farm_size_ha", "has_insurance",
-]
+# Single source of truth - imported from ml_service
+from .ml_service import FEATURE_NAMES
 
 # ---- Scaling Note (Step 8) ----
 # Random Forest does NOT require feature scaling.
 # It uses decision trees that split on raw feature values.
-# This is documented deliberately — it's a conscious engineering choice, not an oversight.
+# This is documented deliberately - it's a conscious engineering choice, not an oversight.
 SCALING_NOTE = """
 Feature Scaling: NOT APPLIED (by design)
 
@@ -77,7 +73,7 @@ def train_with_validation(X: np.ndarray, y_risk: np.ndarray,
         "n_samples": len(X),
         "n_features": X.shape[1],
         "feature_names": FEATURE_NAMES,
-        "scaling": "Not applied — Random Forest is scale-invariant",
+        "scaling": "Not applied - Random Forest is scale-invariant",
         "scaling_note": SCALING_NOTE.strip(),
     }
 
@@ -223,13 +219,13 @@ def train_with_validation(X: np.ndarray, y_risk: np.ndarray,
         "n_features": X.shape[1],
         "feature_names": FEATURE_NAMES,
         "targets": ["credit_risk", "repayment_probability", "debt_capacity_sek"],
-        "scaling": "none — Random Forest is scale-invariant",
+        "scaling": "none - Random Forest is scale-invariant",
         "encoding": "LabelEncoder for categorical, passthrough for numeric",
-        "data_version": "v1.0 — 2500 synthetic Swedish farmers",
+        "data_version": "v1.0 - 2500 synthetic Swedish farmers",
         "data_leakage_check": (
             "Only pre-approval features used. Future repayment outcomes "
             "are labels only, never input features. Train/test split is "
-            "time-respecting — no future data in training."
+            "time-respecting - no future data in training."
         ),
         "bias_note": (
             "Synthetic dataset generated with representative distributions "
@@ -258,7 +254,7 @@ def train_with_validation(X: np.ndarray, y_risk: np.ndarray,
             "feature_names": FEATURE_NAMES,
             "n_features": len(FEATURE_NAMES),
             "feature_order": {name: i for i, name in enumerate(FEATURE_NAMES)},
-            "scaling_params": None,  # RF — no scaling
+            "scaling_params": None,  # RF - no scaling
             "encoding_maps": {},      # populated if categorical encoding used
         }, f, indent=2)
 
@@ -276,7 +272,7 @@ def encode_categorical(values: list[str], method: str = "label") -> tuple:
     """
     Encode categorical variables. (Step 9)
 
-    For tree-based models, Label Encoding is preferred — it preserves
+    For tree-based models, Label Encoding is preferred - it preserves
     ordinal relationships if they exist and doesn't increase dimensionality.
     OneHot is better for linear models.
     """

@@ -1,5 +1,5 @@
 """
-ML Service — Random Forest model for credit risk, repayment, and debt capacity.
+ML Service - Random Forest model for credit risk, repayment, and debt capacity.
 Trains on database farmers if available, falls back to numpy synthetic data.
 """
 import json
@@ -97,7 +97,7 @@ def load_or_train_models(force_retrain: bool = False) -> tuple:
             logger.info(f"Training ML models from {farmer_count} database farmers...")
             return _train_from_database(db, farmer_count)
         else:
-            logger.info(f"Only {farmer_count} farmers in DB — using synthetic training data...")
+            logger.info(f"Only {farmer_count} farmers in DB - using synthetic training data...")
             db.close()
             return _train_from_synthetic()
     except Exception as e:
@@ -165,7 +165,7 @@ def _train_from_database(db, farmer_count: int, use_full_pipeline: bool = False)
             ops.__dict__ if ops else None,
         )
 
-        # Repayment history — defensive type conversion for SQLite
+        # Repayment history - defensive type conversion for SQLite
         total_on_time = sum(_to_int(l.on_time_payments) for l in loans)
         total_due = sum(_to_int(l.total_payments_due) for l in loans)
         repayment_ratio = total_on_time / max(total_due, 1)

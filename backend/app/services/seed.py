@@ -1,5 +1,5 @@
 """
-Mock data seeder — populates the database with synthetic Swedish demo data.
+Mock data seeder - populates the database with synthetic Swedish demo data.
 
 GDPR NOTICE: All data in this seeder is SYNTHETIC and FICTIONAL.
 No real personal data is used. Names, addresses, and financial figures
@@ -67,13 +67,13 @@ def seed_demo_data(db: Session, farmer_id: int | None = None):
                  description="Traktorlan Swedbank Finans"),
         Document(farmer_id=fid, filename="lagfart_fastighet.pdf", document_type="land_record",
                  sub_type="ownership", file_path="data/samples/lagfart_fastighet.pdf",
-                 description="Lagfart — fastighetsbevis"),
+                 description="Lagfart - fastighetsbevis"),
         Document(farmer_id=fid, filename="skorde_rapport_2024.pdf", document_type="farm_doc",
                  sub_type="production", file_path="data/samples/skorde_rapport_2024.pdf",
-                 description="Skorderapport 2024 — vete & korn"),
+                 description="Skorderapport 2024 - vete & korn"),
         Document(farmer_id=fid, filename="forsakringsbrev.pdf", document_type="insurance",
                  sub_type="crop_insurance", file_path="data/samples/forsakringsbrev.pdf",
-                 description="Forsakringsbrev — skordeskadeskydd Lansforsakringar"),
+                 description="Forsakringsbrev - skordeskadeskydd Lansforsakringar"),
     ]
     db.add_all(docs)
     logger.info(f"  Documents: {len(docs)} uploaded [SYNTHETIC]")

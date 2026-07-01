@@ -1,5 +1,5 @@
 """
-ExistingLoan model — tracks all existing financing for a farmer.
+ExistingLoan model - tracks all existing financing for a farmer.
 """
 from datetime import datetime
 

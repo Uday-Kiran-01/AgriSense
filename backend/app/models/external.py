@@ -1,5 +1,5 @@
 """
-ExternalData model — stores weather, commodity, and government data.
+ExternalData model - stores weather, commodity, and government data.
 """
 from datetime import datetime, date
 

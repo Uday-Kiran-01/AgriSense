@@ -1,5 +1,5 @@
 """
-Environmental Risk Score — composite score from weather, commodity, and fuel data.
+Environmental Risk Score - composite score from weather, commodity, and fuel data.
 """
 from ..logger import get_logger
 

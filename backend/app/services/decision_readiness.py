@@ -14,7 +14,7 @@ Answers:
 Three outcomes:
   1. Ready for assessment
   2. Assessment possible, but confidence reduced
-  3. Insufficient evidence — manual review required
+  3. Insufficient evidence - manual review required
 """
 from datetime import datetime, date
 from typing import Any
@@ -40,7 +40,7 @@ REQUIRED_DOCUMENTS = {
     "loan_doc": {
         "label": "Loan Documents (Låneavtal)",
         "required": True,
-        "max_age_months": None,  # no expiry — historical loans are valid
+        "max_age_months": None,  # no expiry - historical loans are valid
         "weight": 15,
     },
     "land_record": {
@@ -129,11 +129,11 @@ def assess_document_completeness(documents: list[dict]) -> dict:
 
 def _completeness_status(pct: float, missing_required: list) -> str:
     if pct >= 90 and len(missing_required) == 0:
-        return "Complete — all required documents present"
+        return "Complete - all required documents present"
     elif pct >= 70:
-        return f"Incomplete — {len(missing_required)} required document(s) missing"
+        return f"Incomplete - {len(missing_required)} required document(s) missing"
     else:
-        return "Insufficient — missing critical documents"
+        return "Insufficient - missing critical documents"
 
 
 def assess_data_freshness(financial_records: list[dict],
@@ -181,7 +181,7 @@ def assess_data_freshness(financial_records: list[dict],
 
     # Operational data freshness
     if operational_data:
-        # Operational data from seed has created_at — use that if available
+        # Operational data from seed has created_at - use that if available
         created = operational_data.get("created_at")
         if isinstance(created, datetime):
             age_days = (now - created.date()).days
@@ -208,7 +208,7 @@ def assess_data_freshness(financial_records: list[dict],
         "age_days": 1,
         "freshness_pct": 95,
         "weight": FRESHNESS_THRESHOLDS["weather_data"]["weight"],
-        "note": "Mock data — real API would provide current readings",
+        "note": "Mock data - real API would provide current readings",
     })
     earned_weight += FRESHNESS_THRESHOLDS["weather_data"]["weight"] * 0.95
 
@@ -219,7 +219,7 @@ def assess_data_freshness(financial_records: list[dict],
         "age_days": 3,
         "freshness_pct": 90,
         "weight": FRESHNESS_THRESHOLDS["commodity_data"]["weight"],
-        "note": "Mock data — real API would provide current prices",
+        "note": "Mock data - real API would provide current prices",
     })
     earned_weight += FRESHNESS_THRESHOLDS["commodity_data"]["weight"] * 0.90
 
@@ -234,11 +234,11 @@ def assess_data_freshness(financial_records: list[dict],
 
 def _freshness_status(pct: float) -> str:
     if pct >= 80:
-        return "Current — all data is within acceptable ranges"
+        return "Current - all data is within acceptable ranges"
     elif pct >= 60:
-        return "Aging — some data may be outdated"
+        return "Aging - some data may be outdated"
     else:
-        return "Stale — significant data is outdated. Confidence heavily reduced."
+        return "Stale - significant data is outdated. Confidence heavily reduced."
 
 
 def assess_evidence_reliability(
@@ -273,13 +273,13 @@ def assess_evidence_reliability(
     quality = round(min(100, max(0, quality)), 1)
 
     if quality >= 85:
-        status = "Strong — sufficient, recent, and consistent evidence"
+        status = "Strong - sufficient, recent, and consistent evidence"
     elif quality >= 65:
-        status = "Adequate — some gaps or aging data, but assessment possible"
+        status = "Adequate - some gaps or aging data, but assessment possible"
     elif quality >= 45:
-        status = "Weak — significant evidence gaps. Confidence reduced."
+        status = "Weak - significant evidence gaps. Confidence reduced."
     else:
-        status = "Insufficient — manual review required before assessment"
+        status = "Insufficient - manual review required before assessment"
 
     return {
         "evidence_reliability_pct": quality,
@@ -300,12 +300,12 @@ def calculate_assessment_readiness(
     n_manual_review_flags: int = 0,
 ) -> dict:
     """
-    Final decision readiness — can the AI make a recommendation?
+    Final decision readiness - can the AI make a recommendation?
 
     Three outcomes:
       1. Ready for assessment
       2. Assessment possible, but confidence reduced
-      3. Insufficient evidence — manual review required
+      3. Insufficient evidence - manual review required
     """
     # Model confidence reduces readiness if low
     model_factor = (model_confidence or 0.85) * 100
@@ -356,7 +356,7 @@ def _to_int(val) -> int:
 
 def assess_credit_history(existing_loans: list[dict]) -> dict:
     """
-    Detect thin file — no previous loans is NOT the same as low risk.
+    Detect thin file - no previous loans is NOT the same as low risk.
     It means insufficient historical evidence.
 
     Returns credit history profile with evidence quality rating.
@@ -399,7 +399,7 @@ def assess_credit_history(existing_loans: list[dict]) -> dict:
     else:
         quality = "insufficient"
         stars = 1
-        msg = "Minimal credit history — insufficient for reliable assessment."
+        msg = "Minimal credit history - insufficient for reliable assessment."
 
     return {
         "profile": "established_borrower" if quality in ("excellent", "good") else "limited_history",
@@ -539,7 +539,7 @@ def assess_evidence_categories(
         "weak_categories": weak_categories,
         "has_thin_file": credit["profile"] == "thin_file",
         "thin_file_note": (
-            "Credit history is unavailable — assessment relies on financial "
+            "Credit history is unavailable - assessment relies on financial "
             "and operational evidence rather than borrowing history."
         ) if credit["profile"] == "thin_file" else None,
     }
@@ -568,7 +568,7 @@ def run_full_readiness_assessment(
         n_conflicts, n_outliers, n_validation_errors,
     )
     readiness = calculate_assessment_readiness(
-        evidence["evidence_quality_pct"],
+        evidence["evidence_reliability_pct"],
         model_confidence,
         len(completeness.get("missing_required", [])),
     )

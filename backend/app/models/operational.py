@@ -1,5 +1,5 @@
 """
-OperationalData model — farm-specific operational information.
+OperationalData model - farm-specific operational information.
 """
 from datetime import datetime
 

@@ -2,16 +2,16 @@
 Data Quality & Preprocessing Engine
 
 Validates, cleans, and flags issues in farmer financial data.
-Designed for agricultural lending — never silently modifies data.
+Designed for agricultural lending - never silently modifies data.
 All flagged issues are surfaced to the loan officer for review.
 
 Steps:
-  1. Data Validation — reject impossible values
-  2. Missing Value Detection — identify & suggest strategies
-  3. Duplicate Detection — find duplicate records
-  4. Outlier Detection — flag (never auto-remove)
-  5. Data Standardization — currency, units, dates
-  6. Data Ambiguity — conflicting values across documents
+  1. Data Validation - reject impossible values
+  2. Missing Value Detection - identify & suggest strategies
+  3. Duplicate Detection - find duplicate records
+  4. Outlier Detection - flag (never auto-remove)
+  5. Data Standardization - currency, units, dates
+  6. Data Ambiguity - conflicting values across documents
 """
 import re
 from datetime import datetime
@@ -78,7 +78,7 @@ def validate_farmer_data(farmer_data: dict) -> list[dict]:
                 "value": str(value),
                 "severity": "high",
                 "message": f"{field}: '{value}' is not a valid number",
-                "action": "Reject — request corrected value",
+                "action": "Reject - request corrected value",
             })
             continue
 
@@ -89,7 +89,7 @@ def validate_farmer_data(farmer_data: dict) -> list[dict]:
                 "value": value,
                 "severity": "high",
                 "message": f"{field}: {value} is below minimum ({rules['min']} {rules.get('unit','')})",
-                "action": "Reject — value is impossible",
+                "action": "Reject - value is impossible",
             })
         elif value > rules["max"]:
             issues.append({
@@ -98,7 +98,7 @@ def validate_farmer_data(farmer_data: dict) -> list[dict]:
                 "value": value,
                 "severity": "high",
                 "message": f"{field}: {value} exceeds maximum ({rules['max']} {rules.get('unit','')})",
-                "action": "Reject — value is impossible",
+                "action": "Reject - value is impossible",
             })
 
     return issues
@@ -121,7 +121,7 @@ def detect_missing_values(farmer_data: dict) -> list[dict]:
                 "field": field,
                 "severity": "high",
                 "strategy": MISSING_VALUE_STRATEGIES["financial"],
-                "message": f"{field} is missing — will use median of similar-sized farms",
+                "message": f"{field} is missing - will use median of similar-sized farms",
                 "action": f"Impute using regional median for farms of similar size",
             })
 
@@ -134,7 +134,7 @@ def detect_missing_values(farmer_data: dict) -> list[dict]:
                 "field": field,
                 "severity": "medium",
                 "strategy": MISSING_VALUE_STRATEGIES["operational"],
-                "message": f"{field} is missing — will use most common value in region",
+                "message": f"{field} is missing - will use most common value in region",
                 "action": "Impute from regional agricultural statistics",
             })
 
@@ -146,7 +146,7 @@ def detect_missing_values(farmer_data: dict) -> list[dict]:
             "severity": "high",
             "strategy": MISSING_VALUE_STRATEGIES["loan"],
             "message": "Loan EMI exists but outstanding balance is missing",
-            "action": "Flag for manual review — cannot estimate debt without balance",
+            "action": "Flag for manual review - cannot estimate debt without balance",
         })
 
     return issues
@@ -226,7 +226,7 @@ def detect_outliers(values: list[float], field_name: str, method: str = "iqr") -
                 "threshold": round(threshold, 2),
                 "distance": distance,
                 "message": f"{field_name}: {val:,.0f} is {distance} threshold ({threshold:,.0f})",
-                "action": "Flag for review — do NOT automatically remove",
+                "action": "Flag for review - do NOT automatically remove",
             })
 
     return issues
@@ -256,7 +256,7 @@ def standardize_currency(value: float, from_currency: str, to_currency: str = "S
 
     Does NOT auto-convert without documenting it.
     """
-    # Approximate rates (for demo — would use real API in production)
+    # Approximate rates (for demo - would use real API in production)
     rates = {"SEK": 1.0, "EUR": 11.5, "USD": 10.5, "DKK": 1.55, "NOK": 1.05}
 
     if from_currency == to_currency:
@@ -339,7 +339,7 @@ def detect_ambiguity(source_a: dict, source_b: dict, field: str,
             "severity": "high" if diff_pct > 25 else "medium",
             "message": (f"Conflicting {field}: {source_a_name}={va:,.0f} vs "
                        f"{source_b_name}={vb:,.0f} ({diff_pct:.0f}% difference)"),
-            "action": "Flag for manual review — do NOT auto-resolve",
+            "action": "Flag for manual review - do NOT auto-resolve",
         }
 
     return None
@@ -365,7 +365,7 @@ def run_full_preprocessing(farmer_id: int, financial_records: list[dict],
         "fields_requiring_review": [],
     }
 
-    # 1. Validation — check all financial records
+    # 1. Validation - check all financial records
     for record in financial_records:
         issues = validate_farmer_data(record)
         report["validation"].extend(issues)
@@ -383,7 +383,7 @@ def run_full_preprocessing(farmer_id: int, financial_records: list[dict],
     outlier_issues = detect_outliers_dataset(financial_records)
     report["outliers"] = outlier_issues
 
-    # 5. Ambiguity — compare latest two financial records
+    # 5. Ambiguity - compare latest two financial records
     if len(financial_records) >= 2:
         for field in ["revenue", "operating_expenses", "total_assets"]:
             ambiguity = detect_ambiguity(

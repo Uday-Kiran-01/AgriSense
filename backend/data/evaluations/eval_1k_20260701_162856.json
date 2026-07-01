@@ -1,0 +1,167 @@
+{
+  "metrics": {
+    "n_farmers_evaluated": 1000,
+    "metrics": {
+      "accuracy": 0.801,
+      "precision": 0.9938,
+      "recall": 0.7092,
+      "f1_score": 0.8277,
+      "roc_auc": 0.9001,
+      "true_positives": 478,
+      "true_negatives": 323,
+      "false_positives": 3,
+      "false_negatives": 196,
+      "note": "FP = lost business opportunity. FN = missed default risk (more expensive)."
+    },
+    "risk_distribution": {
+      "low": 292,
+      "medium": 303,
+      "high": 405
+    },
+    "recommendation_distribution": {
+      "High Risk": 345,
+      "Proceed with Conditions": 147,
+      "Manual Review": 216,
+      "Proceed": 292
+    },
+    "calibration": [
+      {
+        "bin": "0%-20%",
+        "n_farmers": 46,
+        "predicted_avg_risk": 0.178,
+        "actual_default_rate": 0.37,
+        "calibrated": "False"
+      },
+      {
+        "bin": "20%-40%",
+        "n_farmers": 382,
+        "predicted_avg_risk": 0.278,
+        "actual_default_rate": 0.288,
+        "calibrated": "True"
+      },
+      {
+        "bin": "40%-60%",
+        "n_farmers": 227,
+        "predicted_avg_risk": 0.509,
+        "actual_default_rate": 0.89,
+        "calibrated": "False"
+      },
+      {
+        "bin": "60%-80%",
+        "n_farmers": 321,
+        "predicted_avg_risk": 0.71,
+        "actual_default_rate": 1.0,
+        "calibrated": "False"
+      },
+      {
+        "bin": "80%-100%",
+        "n_farmers": 24,
+        "predicted_avg_risk": 0.815,
+        "actual_default_rate": 1.0,
+        "calibrated": "False"
+      }
+    ],
+    "interesting_misclassifications": [
+      {
+        "name": "Ulla Eriksson",
+        "profile": "mixed",
+        "actual": "High Risk",
+        "predicted": "Low Risk",
+        "risk_score": 0.1467,
+        "dti": 0.2337,
+        "dscr": 1.93,
+        "liquidity": "Seasonal",
+        "possible_reason": "severe seasonal liquidity stress"
+      },
+      {
+        "name": "Olof Johansson",
+        "profile": "established",
+        "actual": "High Risk",
+        "predicted": "Low Risk",
+        "risk_score": 0.16,
+        "dti": 0.1377,
+        "dscr": 3.93,
+        "liquidity": "Seasonal",
+        "possible_reason": "severe seasonal liquidity stress"
+      },
+      {
+        "name": "Johan Johansson",
+        "profile": "mixed",
+        "actual": "High Risk",
+        "predicted": "Low Risk",
+        "risk_score": 0.1667,
+        "dti": 0.2536,
+        "dscr": 1.84,
+        "liquidity": "Seasonal",
+        "possible_reason": "severe seasonal liquidity stress"
+      },
+      {
+        "name": "Fredrik Norberg",
+        "profile": "established",
+        "actual": "Low Risk",
+        "predicted": "High Risk",
+        "risk_score": 0.5533,
+        "dti": 0.4586,
+        "dscr": 1.35,
+        "liquidity": "Seasonal",
+        "possible_reason": "conservative model over-weighs financial ratios"
+      },
+      {
+        "name": "Erik Svensson",
+        "profile": "mixed",
+        "actual": "Low Risk",
+        "predicted": "High Risk",
+        "risk_score": 0.5333,
+        "dti": 0.4736,
+        "dscr": 1.35,
+        "liquidity": "Seasonal",
+        "possible_reason": "conservative model over-weighs financial ratios"
+      },
+      {
+        "name": "Hanna Ekstrom",
+        "profile": "established",
+        "actual": "Low Risk",
+        "predicted": "High Risk",
+        "risk_score": 0.5,
+        "dti": 0.4659,
+        "dscr": 1.33,
+        "liquidity": "Seasonal",
+        "possible_reason": "crop insurance reduced perceived risk"
+      }
+    ],
+    "by_profile": {
+      "mixed": {
+        "count": 433,
+        "correct": 362,
+        "avg_risk": 0.54,
+        "accuracy": 0.836
+      },
+      "conservative": {
+        "count": 82,
+        "correct": 58,
+        "avg_risk": 0.373,
+        "accuracy": 0.707
+      },
+      "established": {
+        "count": 452,
+        "correct": 360,
+        "avg_risk": 0.445,
+        "accuracy": 0.796
+      },
+      "young_farmer": {
+        "count": 12,
+        "correct": 9,
+        "avg_risk": 0.293,
+        "accuracy": 0.75
+      },
+      "expansion": {
+        "count": 21,
+        "correct": 12,
+        "avg_risk": 0.41,
+        "accuracy": 0.571
+      }
+    }
+  },
+  "n": 1000,
+  "ts": "20260701_162856"
+}

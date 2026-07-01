@@ -1,5 +1,5 @@
 """
-Financial Analysis Engine — calculates all key financial ratios.
+Financial Analysis Engine - calculates all key financial ratios.
 """
 from ..logger import get_logger
 
@@ -125,7 +125,7 @@ def calculate_financial_ratios(
 
     if current_ratio < 1.0:
         flags.append({"indicator": "current_ratio", "severity": "high",
-                       "message": f"Current ratio of {current_ratio:.2f}x — liquidity concern"})
+                       "message": f"Current ratio of {current_ratio:.2f}x - liquidity concern"})
 
     ratios["risk_flags"] = flags
     ratios["overall_financial_health"] = (
@@ -252,7 +252,7 @@ def _recommendation_category(score: int, flags: list, dscr: float, dti: float) -
     elif score >= 55 and len(high_flags) <= 1 and dscr >= 1.25:
         category = "Proceed with Conditions"
         color = "#f57f17"
-        reasoning = "Adequate financial health. Conditional approval recommended — consider crop insurance or partial collateral."
+        reasoning = "Adequate financial health. Conditional approval recommended - consider crop insurance or partial collateral."
     elif score >= 35 and dscr >= 1.0:
         category = "Manual Review"
         color = "#e65100"

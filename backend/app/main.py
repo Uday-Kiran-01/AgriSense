@@ -1,5 +1,5 @@
 """
-AgriSense AI — FastAPI Backend
+AgriSense AI - FastAPI Backend
 Main application entry point.
 """
 from contextlib import asynccontextmanager
@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database import init_db, SessionLocal
-from .routers.agrisense import router
+from .routers import farmers_router, analysis_router, ml_router
 from .services.seed import seed_demo_data
 from .logger import get_logger
 
@@ -49,7 +49,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS — allow Streamlit frontend
+# CORS - allow Streamlit frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -59,7 +59,9 @@ app.add_middleware(
 )
 
 # Routes
-app.include_router(router)
+app.include_router(farmers_router)
+app.include_router(analysis_router)
+app.include_router(ml_router)
 
 
 @app.get("/")

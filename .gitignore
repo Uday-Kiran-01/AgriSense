@@ -19,9 +19,9 @@ env/
 *.swo
 
 # Data
-data/agrisense.db
+*.db
+*.pkl
 data/logs/*.log
-data/models/*.pkl
 
 # Environment
 .env

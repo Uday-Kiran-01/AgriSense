@@ -1,13 +1,13 @@
 """
-External data service — free public APIs for weather and commodity prices.
+External data service - free public APIs for weather and commodity prices.
 
 Data sources (no API keys required):
-  - SMHI (Swedish Meteorological and Hydrological Institute) — weather observations
-  - EU Agri-Food Data Portal (European Commission) — cereal/grain prices
+  - SMHI (Swedish Meteorological and Hydrological Institute) - weather observations
+  - EU Agri-Food Data Portal (European Commission) - cereal/grain prices
   - Mock fallbacks for fuel, fertilizer, and EU CAP subsidies
 
 Architecture: Each external API has a clean interface. Swapping mock for real
-requires changing only this service — no downstream changes needed.
+requires changing only this service - no downstream changes needed.
 """
 import random
 from datetime import date
@@ -20,14 +20,14 @@ from ..logger import get_logger
 logger = get_logger(__name__)
 
 # ---------------------------------------------------------------------------
-# SMHI — Swedish weather (free, no API key)
+# SMHI - Swedish weather (free, no API key)
 # ---------------------------------------------------------------------------
 
 # Swedish agricultural regions mapped to nearest verified SMHI stations
 # Verified with live data (temperature + precipitation available):
 SMHI_REGION_STATIONS = {
     # Skane (verified: Lund 21.3C, Helsingborg 14.2C)
-    "Skane": "53430",           # Lund — best coverage
+    "Skane": "53430",           # Lund - best coverage
     "Skane_Lund": "53430",
     "Skane_Helsingborg": "62040",
     "Skane_Kristianstad": "53430",  # fallback to Lund (Kristianstad has no recent data)
@@ -56,7 +56,7 @@ SMHI_REGION_STATIONS = {
     "Gotland": "53430",          # Lund (island climate, nearest verified maritime)
     "Vastmanland": "92410",      # Arvika
     "Orebro": "92410",           # Arvika
-    # Default fallback — Lund (best data availability)
+    # Default fallback - Lund (best data availability)
     "_default": "53430",
 }
 
@@ -173,11 +173,11 @@ async def fetch_weather_data(region: str = "Skane") -> dict:
             "is_mock": False,
         }
 
-    # Mock fallback — Swedish climate (varies by region: north colder/drier, south warmer/wetter)
+    # Mock fallback - Swedish climate (varies by region: north colder/drier, south warmer/wetter)
     is_north = region.lower() in ("norrbotten", "vasterbotten", "dalarna", "gavleborg", "jamtland")
     rainfall = round(random.uniform(350, 550) if is_north else random.uniform(500, 750), 1)
     temp = round(random.uniform(-10, 12) if is_north else random.uniform(-2, 22), 1)
-    logger.info(f"SMHI unavailable for {region} — using mock data ({temp}C, {rainfall}mm)")
+    logger.info(f"SMHI unavailable for {region} - using mock data ({temp}C, {rainfall}mm)")
     return {
         "temperature_celsius": temp,
         "rainfall_mm": rainfall,
@@ -194,7 +194,7 @@ async def fetch_weather_data(region: str = "Skane") -> dict:
 
 
 # ---------------------------------------------------------------------------
-# EU Agri-Food Data Portal — commodity prices (free, no API key)
+# EU Agri-Food Data Portal - commodity prices (free, no API key)
 # ---------------------------------------------------------------------------
 
 # Mapping from our commodity names to EU cereal product codes
@@ -269,7 +269,7 @@ async def fetch_commodity_prices(commodity: str = "WHEAT") -> dict:
     except Exception as e:
         logger.warning(f"EU Agri-Food API failed: {e}. Using mock data.")
 
-    # Mock fallback — Swedish/EU commodity prices (SEK/kg, 2024 reference)
+    # Mock fallback - Swedish/EU commodity prices (SEK/kg, 2024 reference)
     mock_prices = {
         "WHEAT": (2.48, -1.8),
         "BARLEY": (2.10, 2.3),
@@ -290,7 +290,7 @@ async def fetch_commodity_prices(commodity: str = "WHEAT") -> dict:
 
 
 # ---------------------------------------------------------------------------
-# FAOSTAT (UN FAO) — crop production, yield, and producer prices
+# FAOSTAT (UN FAO) - crop production, yield, and producer prices
 # ---------------------------------------------------------------------------
 
 # FAOSTAT codes: Sweden = 210, Wheat = 15 (item code), Production = 5510 (element)
@@ -309,7 +309,7 @@ FAOSTAT_ELEMENTS = {
 async def fetch_faostat_data(commodity: str = "WHEAT", years: int = 5) -> dict:
     """
     Fetch crop production, yield, and price data from FAOSTAT (UN FAO).
-    Free public API — no key required. Falls back to mock Swedish data.
+    Free public API - no key required. Falls back to mock Swedish data.
 
     Returns dict with: production_tonnes, area_ha, yield_kg_ha,
                        producer_price_usd_tonne, year_range, source, is_mock
@@ -385,7 +385,7 @@ async def fetch_faostat_data(commodity: str = "WHEAT", years: int = 5) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Eurostat — EU agricultural price indices and economic indicators
+# Eurostat - EU agricultural price indices and economic indicators
 # ---------------------------------------------------------------------------
 
 # Eurostat dataset codes for agricultural prices
@@ -400,7 +400,7 @@ EUROSTAT_DATASETS = {
 async def fetch_eurostat_data(dataset: str = "crop_prices") -> dict:
     """
     Fetch agricultural statistics from Eurostat (EU statistical office).
-    Free public API — no key required. Falls back to mock Swedish data.
+    Free public API - no key required. Falls back to mock Swedish data.
 
     Returns dict with: dataset, latest_value, unit, year, source, is_mock
     """
@@ -426,7 +426,7 @@ async def fetch_eurostat_data(dataset: str = "crop_prices") -> dict:
                     "year": 2024,
                     "source": "eurostat_live",
                     "is_mock": False,
-                    "_note": "Full Eurostat JSON structure — parsed on demand",
+                    "_note": "Full Eurostat JSON structure - parsed on demand",
                 }
     except Exception as e:
         logger.warning(f"Eurostat API failed: {e}. Using mock data.")
@@ -449,7 +449,7 @@ async def fetch_eurostat_data(dataset: str = "crop_prices") -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Fuel & Fertilizer (mock — no free real-time API available)
+# Fuel & Fertilizer (mock - no free real-time API available)
 # ---------------------------------------------------------------------------
 
 async def fetch_fuel_prices() -> dict:
@@ -471,7 +471,7 @@ async def fetch_fuel_prices() -> dict:
 async def get_all_external_data(region: str = "Skane", commodity: str = "WHEAT") -> dict:
     """
     Fetch all external data concurrently from free public APIs.
-    Each API is called independently — slow APIs don't block fast ones.
+    Each API is called independently - slow APIs don't block fast ones.
     Returns a unified external data dictionary.
     """
     import asyncio

@@ -2,19 +2,19 @@
 Synthetic Agricultural Portfolio Generator
 Generates 2500+ realistic Swedish farming businesses for ML training.
 
-Creates diverse PROFILES — not random numbers. Each profile represents
+Creates diverse PROFILES - not random numbers. Each profile represents
 a distinct type of agricultural business with realistic financial,
 operational, and environmental characteristics.
 
-Profiles (the model learns — we don't hardcode rules):
-  1. Young Farmer — new entrant, small farm, no credit history
-  2. Established — experienced, multiple loans, strong repayment
-  3. Expansion — large farm, high debt, weather-sensitive
-  4. Conservative — low debt, moderate size, stable income
-  5. Diversified — mixed crops, multiple income streams
-  6. Struggling — weather-hit, declining revenue, repayment issues
-  7. Organic — premium prices, higher costs, niche market
-  8. Tenant — leased land, lower assets, variable costs
+Profiles (the model learns - we don't hardcode rules):
+  1. Young Farmer - new entrant, small farm, no credit history
+  2. Established - experienced, multiple loans, strong repayment
+  3. Expansion - large farm, high debt, weather-sensitive
+  4. Conservative - low debt, moderate size, stable income
+  5. Diversified - mixed crops, multiple income streams
+  6. Struggling - weather-hit, declining revenue, repayment issues
+  7. Organic - premium prices, higher costs, niche market
+  8. Tenant - leased land, lower assets, variable costs
 
 GDPR: ALL DATA IS SYNTHETIC. No real PII.
 
@@ -38,7 +38,7 @@ from ..logger import get_logger
 logger = get_logger(__name__)
 
 # ---- Swedish Agricultural Statistics (2023-2024 reference) ----
-# Farm size distribution (hectares) — most Swedish grain farms
+# Farm size distribution (hectares) - most Swedish grain farms
 FARM_SIZE_DIST = {
     "small": (10, 30, 0.25),     # min, max, probability
     "medium": (30, 80, 0.45),
@@ -46,7 +46,7 @@ FARM_SIZE_DIST = {
     "xlarge": (200, 500, 0.10),
 }
 
-# Revenue per hectare for grain (SEK) — varies by region, weather, crop
+# Revenue per hectare for grain (SEK) - varies by region, weather, crop
 REVENUE_PER_HA_MEAN = 16500   # SEK/ha (wheat ~6t/ha × 2.50 kr/kg = 15000, barley ~5t × 2.10 = 10500)
 REVENUE_PER_HA_STD = 3500
 
@@ -151,7 +151,7 @@ def generate_synthetic_farmers(n_farmers: int = 2500, seed: int = 42) -> list[di
         uc_score = int(rng.normal(UC_SCORE_MEAN, UC_SCORE_STD))
         uc_score = _clamp(uc_score, 350, 890)
 
-        # Farm size — pick from distribution
+        # Farm size - pick from distribution
         size_choice = rng.choice(
             ["small", "medium", "large", "xlarge"],
             p=[FARM_SIZE_DIST[k][2] for k in ["small", "medium", "large", "xlarge"]],
@@ -159,7 +159,7 @@ def generate_synthetic_farmers(n_farmers: int = 2500, seed: int = 42) -> list[di
         min_ha, max_ha, _ = FARM_SIZE_DIST[size_choice]
         farm_ha = round(rng.uniform(min_ha, max_ha), 1)
 
-        # Revenue per ha varies — bigger farms slightly more efficient
+        # Revenue per ha varies - bigger farms slightly more efficient
         efficiency_bonus = 1.0 + (farm_ha - 30) * 0.001 if farm_ha > 30 else 1.0
         rev_per_ha = rng.normal(REVENUE_PER_HA_MEAN * efficiency_bonus, REVENUE_PER_HA_STD)
         rev_per_ha = max(8000, rev_per_ha)
@@ -201,7 +201,7 @@ def generate_synthetic_farmers(n_farmers: int = 2500, seed: int = 42) -> list[di
             depreciation = round(farm_ha * rng.uniform(1200, 2200))
 
             # Loan generation happens below, interest expense calculated after
-            interest_expense = 0  # placeholder — filled after loans generated
+            interest_expense = 0  # placeholder - filled after loans generated
 
             gross = revenue - operating_expenses - depreciation
             net_income = round(gross * rng.uniform(0.75, 0.95))
@@ -444,7 +444,7 @@ def seed_bulk_farmers(db: Session, n_farmers: int = 2500) -> int:
 
 
 # ===========================================================================
-# Farmer Profiles — Realistic Agricultural Business Archetypes
+# Farmer Profiles - Realistic Agricultural Business Archetypes
 # ===========================================================================
 # Each profile encodes a distinct risk pattern that the ML model must LEARN.
 # We do NOT hardcode "if no loans → medium confidence". The model discovers it.
@@ -453,7 +453,7 @@ FARMER_PROFILES = {
     "young_farmer": {
         "label": "Young Farmer (New Entrant)",
         "pct": 0.12,
-        "default_probability": 0.12,  # Probabilistic — not every young farmer defaults
+        "default_probability": 0.12,  # Probabilistic - not every young farmer defaults
         "years_farming": (2, 8),
         "farm_ha": (10, 40),
         "land_ownership": "leased",

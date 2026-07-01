@@ -1,5 +1,5 @@
 """
-DecisionMemo model — stores AI-generated decision memos.
+DecisionMemo model - stores AI-generated decision memos.
 """
 from datetime import datetime
 

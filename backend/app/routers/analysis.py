@@ -1,5 +1,5 @@
 """
-AgriSense API Router — all endpoints for the platform.
+AgriSense API Router - all endpoints for the platform.
 """
 import json
 
@@ -29,108 +29,11 @@ from ..services.external_data import get_all_external_data
 from ..logger import get_logger
 
 logger = get_logger(__name__)
-router = APIRouter(prefix="/api", tags=["AgriSense"])
+router = APIRouter(prefix="/api", tags=["Analysis & Decisions"])
 
 
 # ---------------------------------------------------------------------------
 # Farmer
-# ---------------------------------------------------------------------------
-@router.post("/farmers", response_model=FarmerRead, status_code=201)
-def create_farmer(data: FarmerCreate, db: Session = Depends(get_db)):
-    farmer = Farmer(**data.model_dump())
-    db.add(farmer)
-    db.commit()
-    db.refresh(farmer)
-    logger.info(f"Farmer created: {farmer.full_name} (id={farmer.id})")
-    return farmer
-
-
-@router.get("/farmers/{farmer_id}", response_model=FarmerRead)
-def get_farmer(farmer_id: int, db: Session = Depends(get_db)):
-    farmer = db.get(Farmer, farmer_id)
-    if not farmer:
-        raise HTTPException(404, "Farmer not found")
-    return farmer
-
-
-@router.get("/farmers", response_model=list[FarmerRead])
-def list_farmers(db: Session = Depends(get_db)):
-    return db.query(Farmer).all()
-
-
-# ---------------------------------------------------------------------------
-# Existing Loans
-# ---------------------------------------------------------------------------
-@router.post("/loans", response_model=LoanRead, status_code=201)
-def create_loan(data: LoanCreate, db: Session = Depends(get_db)):
-    loan = ExistingLoan(**data.model_dump())
-    db.add(loan)
-    db.commit()
-    db.refresh(loan)
-    return loan
-
-
-@router.get("/farmers/{farmer_id}/loans", response_model=list[LoanRead])
-def get_farmer_loans(farmer_id: int, db: Session = Depends(get_db)):
-    return db.query(ExistingLoan).filter(ExistingLoan.farmer_id == farmer_id).all()
-
-
-# ---------------------------------------------------------------------------
-# Financial Records
-# ---------------------------------------------------------------------------
-@router.post("/financials", response_model=FinancialRecordRead, status_code=201)
-def create_financial_record(data: FinancialRecordCreate, db: Session = Depends(get_db)):
-    record = FinancialRecord(**data.model_dump())
-    db.add(record)
-    db.commit()
-    db.refresh(record)
-    return record
-
-
-@router.get("/farmers/{farmer_id}/financials", response_model=list[FinancialRecordRead])
-def get_farmer_financials(farmer_id: int, db: Session = Depends(get_db)):
-    return (
-        db.query(FinancialRecord)
-        .filter(FinancialRecord.farmer_id == farmer_id)
-        .order_by(FinancialRecord.year.desc())
-        .all()
-    )
-
-
-# ---------------------------------------------------------------------------
-# Operational Data
-# ---------------------------------------------------------------------------
-@router.post("/operational", response_model=OperationalDataRead, status_code=201)
-def create_operational_data(data: OperationalDataCreate, db: Session = Depends(get_db)):
-    ops = OperationalData(**data.model_dump())
-    db.add(ops)
-    db.commit()
-    db.refresh(ops)
-    return ops
-
-
-@router.get("/farmers/{farmer_id}/operational", response_model=list[OperationalDataRead])
-def get_farmer_operational(farmer_id: int, db: Session = Depends(get_db)):
-    return (
-        db.query(OperationalData)
-        .filter(OperationalData.farmer_id == farmer_id)
-        .all()
-    )
-
-
-# ---------------------------------------------------------------------------
-# External Data
-# ---------------------------------------------------------------------------
-@router.get("/external-data")
-async def fetch_external_data(region: str = "Gujarat", commodity: str = "WHEAT"):
-    """Fetch weather, commodity, and government data."""
-    data = await get_all_external_data(region, commodity)
-    return data
-
-
-# ---------------------------------------------------------------------------
-# Financial Analysis
-# ---------------------------------------------------------------------------
 @router.get("/farmers/{farmer_id}/financial-analysis")
 def get_financial_analysis(farmer_id: int, db: Session = Depends(get_db)):
     """Calculate all financial ratios for a farmer."""
@@ -557,88 +460,6 @@ def get_shap_explanation(farmer_id: int, db: Session = Depends(get_db)):
 # ---------------------------------------------------------------------------
 # Model Evaluation (Deployment Simulation)
 # ---------------------------------------------------------------------------
-@router.post("/ml/evaluate")
-def run_deployment_evaluation(n_farmers: int = 1000, seed: int = 999):
-    """Generate 1000 unseen farmers and evaluate model performance."""
-    from ..services.evaluation import (
-        generate_evaluation_set, run_batch_inference, compute_evaluation_metrics,
-    )
-
-    logger.info(f"Generating {n_farmers} eval farmers (seed={seed})...")
-    farmers = generate_evaluation_set(n_farmers=n_farmers, seed=seed)
-
-    logger.info(f"Running batch inference on {len(farmers)} farmers...")
-    results = run_batch_inference(farmers)
-
-    logger.info("Computing evaluation metrics...")
-    metrics = compute_evaluation_metrics(results)
-
-    # Save to disk
-    import json
-    from datetime import datetime
-    from pathlib import Path
-    eval_dir = Path("data/evaluations")
-    eval_dir.mkdir(parents=True, exist_ok=True)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    with open(eval_dir / f"evaluation_{timestamp}.json", "w") as f:
-        json.dump({"metrics": metrics, "n_samples": len(results)}, f, indent=2)
-
-    return {
-        "status": "complete",
-        "n_farmers": len(results),
-        "metrics": metrics,
-        "saved_to": f"data/evaluations/evaluation_{timestamp}.json",
-    }
-
-
-@router.get("/ml/latest-evaluation")
-def get_latest_evaluation():
-    """Get the most recent evaluation results."""
-    import json
-    from pathlib import Path
-    eval_dir = Path("data/evaluations")
-    files = sorted(eval_dir.glob("eval_latest.json"), reverse=True)
-    if not files:
-        raise HTTPException(404, "No evaluation found. Run: python run_eval.py")
-    with open(files[0]) as f:
-        return json.load(f)
-
-    financials = (
-        db.query(FinancialRecord)
-        .filter(FinancialRecord.farmer_id == farmer_id)
-        .order_by(FinancialRecord.year.desc())
-        .all()
-    )
-    ops = (
-        db.query(OperationalData)
-        .filter(OperationalData.farmer_id == farmer_id)
-        .first()
-    )
-    loans = (
-        db.query(ExistingLoan)
-        .filter(ExistingLoan.farmer_id == farmer_id)
-        .all()
-    )
-    latest_pred = (
-        db.query(Prediction)
-        .filter(Prediction.farmer_id == farmer_id)
-        .order_by(Prediction.created_at.desc())
-        .first()
-    )
-
-    report = run_full_readiness_assessment(
-        farmer_id,
-        documents,
-        [r.__dict__ for r in financials],
-        [l.__dict__ for l in loans],
-        ops.__dict__ if ops else None,
-        n_conflicts=0,
-        n_outliers=0,
-        n_validation_errors=0,
-        model_confidence=latest_pred.model_confidence if latest_pred else None,
-    )
-    return report
-
 
 @router.get("/farmers/{farmer_id}/scenarios", response_model=list[ScenarioResultRead])
 def get_scenarios(farmer_id: int, db: Session = Depends(get_db)):
@@ -762,7 +583,7 @@ def explain_metric(metric_name: str, value: float, farmer_name: str = "the farme
 # ---------------------------------------------------------------------------
 @router.get("/farmers/{farmer_id}/full-profile", response_model=FullProfile)
 async def get_full_profile(farmer_id: int, db: Session = Depends(get_db)):
-    """Get the complete unified farmer profile — all data sources merged."""
+    """Get the complete unified farmer profile - all data sources merged."""
     farmer = db.get(Farmer, farmer_id)
     if not farmer:
         raise HTTPException(404, "Farmer not found")
@@ -837,7 +658,7 @@ async def get_full_profile(farmer_id: int, db: Session = Depends(get_db)):
 
 
 # ---------------------------------------------------------------------------
-# Bank Officer — Applications Overview
+# Bank Officer - Applications Overview
 # ---------------------------------------------------------------------------
 @router.get("/bank/applications")
 def get_bank_applications(limit: int = 20, db: Session = Depends(get_db)):
@@ -1069,32 +890,3 @@ def get_data_quality_overview(limit: int = 100, db: Session = Depends(get_db)):
 # ---------------------------------------------------------------------------
 # ML Evaluation
 # ---------------------------------------------------------------------------
-@router.get("/ml/evaluation")
-def get_ml_evaluation():
-    """Get the latest ML model evaluation metrics."""
-    from ..services.feature_engineering import get_latest_evaluation
-
-    eval_data = get_latest_evaluation()
-    if not eval_data:
-        raise HTTPException(404, "No evaluation data found. Run training first.")
-
-    return eval_data
-
-
-@router.post("/ml/retrain")
-def retrain_models(db: Session = Depends(get_db)):
-    """Retrain ML models with full pipeline (CV, grid search, evaluation)."""
-    from ..services.ml_service import _train_from_database, _fit_and_save_models
-
-    farmer_count = db.query(Farmer).count()
-    if farmer_count < 10:
-        raise HTTPException(400, f"Need at least 10 farmers, found {farmer_count}")
-
-    logger.info(f"Retraining models on {farmer_count} farmers with full pipeline...")
-    risk_model, repay_model, cap_model = _train_from_database(db, farmer_count, use_full_pipeline=True)
-
-    return {
-        "status": "retrained",
-        "farmers_used": farmer_count,
-        "message": "Models retrained with cross-validation, grid search, and full evaluation",
-    }

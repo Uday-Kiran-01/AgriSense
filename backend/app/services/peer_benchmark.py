@@ -2,7 +2,7 @@
 Peer Benchmarking Engine
 
 Compares a farmer against similar farms in the portfolio.
-Decision-support layer — NOT fed into the ML model.
+Decision-support layer - NOT fed into the ML model.
 
 Filters peers by: region, crop type, farm size range.
 Computes percentiles for key financial and operational metrics.
@@ -229,7 +229,7 @@ def run_peer_benchmark(farmer_id: int, db: Session) -> dict:
         elif rank >= 60:
             interpretation = "Above average"
         elif rank >= 40:
-            interpretation = "Average — comparable to peers"
+            interpretation = "Average - comparable to peers"
         elif rank >= 20:
             interpretation = "Below average"
         else:
@@ -291,11 +291,11 @@ def _metric_label(metric: str) -> str:
 
 def _top_interpretation(metric: str, higher_better: bool) -> str:
     if not higher_better:
-        return "Low — favorable position" if metric in ("debt_to_income", "loan_to_value") else "Strong position"
+        return "Low - favorable position" if metric in ("debt_to_income", "loan_to_value") else "Strong position"
     return "Top performer among peers"
 
 
 def _bottom_interpretation(metric: str, higher_better: bool) -> str:
     if not higher_better:
-        return "High — potential concern" if metric in ("debt_to_income", "loan_to_value") else "Below peers"
-    return "Significantly below peers — review recommended"
+        return "High - potential concern" if metric in ("debt_to_income", "loan_to_value") else "Below peers"
+    return "Significantly below peers - review recommended"

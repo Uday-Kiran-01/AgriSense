@@ -1,5 +1,5 @@
 """
-Document model — stores uploaded document metadata.
+Document model - stores uploaded document metadata.
 """
 from datetime import datetime
 

@@ -1,5 +1,5 @@
 """
-AgriSense AI — Streamlit Dashboard
+AgriSense AI - Streamlit Dashboard
 Main entry point for the decision-support platform.
 """
 import sys
@@ -304,8 +304,8 @@ if page in ["Executive Summary", "My Dashboard"]:
         risk_level = latest.get("overall_financing_risk", "medium")
         summaries = {
             "low": f"✅ {farmer_data.get('full_name','Farmer')} has strong cash flow, low debt burden, and favorable environmental conditions. Overall recommendation: <strong>Proceed</strong> with standard monitoring.",
-            "medium": f"⚠️ {farmer_data.get('full_name','Farmer')} shows adequate financial health with some risk factors. Overall recommendation: <strong>Proceed with conditions</strong> — crop insurance or partial collateral advised.",
-            "high": f"🔴 {farmer_data.get('full_name','Farmer')} has elevated risk indicators requiring attention. Overall recommendation: <strong>Manual review required</strong> — detailed assessment of collateral and repayment capacity needed.",
+            "medium": f"⚠️ {farmer_data.get('full_name','Farmer')} shows adequate financial health with some risk factors. Overall recommendation: <strong>Proceed with conditions</strong> - crop insurance or partial collateral advised.",
+            "high": f"🔴 {farmer_data.get('full_name','Farmer')} has elevated risk indicators requiring attention. Overall recommendation: <strong>Manual review required</strong> - detailed assessment of collateral and repayment capacity needed.",
         }
         st.info(summaries.get(risk_level, summaries["medium"]))
 
@@ -527,7 +527,7 @@ elif page in ["Documents", "My Documents"]:
     </div>
     """, unsafe_allow_html=True)
 
-    # Simulated document list (backend doesn't have a list endpoint yet — uses seed data)
+    # Simulated document list (backend doesn't have a list endpoint yet - uses seed data)
     docs = [
         {"name": "Balance Sheet FY 2023-24", "type": "Financial Statement", "date": "2024-04-15", "status": "✅ Verified"},
         {"name": "Income Statement FY 2023-24", "type": "Financial Statement", "date": "2024-04-15", "status": "✅ Verified"},
@@ -719,7 +719,7 @@ elif page == "Existing Loans":
 
         for loan in loans_data:
             with st.expander(
-                f"{loan['loan_type'].replace('_', ' ').title()} — {loan['outstanding_balance']:,.0f}",
+                f"{loan['loan_type'].replace('_', ' ').title()} - {loan['outstanding_balance']:,.0f}",
                 expanded=True,
             ):
                 col1, col2, col3 = st.columns(3)
@@ -1063,7 +1063,7 @@ elif page == "� Investment Simulator":
                         st.success("✅ Simulation complete!")
                         st.rerun()
                     else:
-                        st.error(f"Error: {resp.status_code} — {resp.text}")
+                        st.error(f"Error: {resp.status_code} - {resp.text}")
                 except Exception as e:
                     st.error(f"Backend error: {e}")
 
@@ -1280,7 +1280,7 @@ elif page in ["Applications", "Pipeline"]:
 
 
 # ===========================================================================
-# Page: How It Works (#9 — Architecture Diagram)
+# Page: How It Works (#9 - Architecture Diagram)
 # ===========================================================================
 elif page == "How It Works":
     st.markdown("## 🏗️ How AgriSense AI Works")
@@ -1377,8 +1377,8 @@ elif page == "How It Works":
 # Page: Model Evaluation
 # ===========================================================================
 elif page == "Model Evaluation":
-    st.markdown("## 🧪 Model Evaluation — Deployment Simulation")
-    st.markdown("""<div class="info-box">Evaluated on <strong>1,000 unseen farmers</strong> — different random seed, shifted feature distributions from training data. This simulates deployment on previously unseen applicants.</div>""", unsafe_allow_html=True)
+    st.markdown("## 🧪 Model Evaluation - Deployment Simulation")
+    st.markdown("""<div class="info-box">Evaluated on <strong>1,000 unseen farmers</strong> - different random seed, shifted feature distributions from training data. This simulates deployment on previously unseen applicants.</div>""", unsafe_allow_html=True)
 
     eval_resp = fetch_json("/ml/latest-evaluation")
     if eval_resp:
@@ -1426,15 +1426,15 @@ elif page == "Model Evaluation":
 
         # Threshold interpretation
         if threshold <= 0.35:
-            interp = "Conservative lending — maximizes recall. Fewer defaults missed, but more good farmers flagged for manual review."
+            interp = "Conservative lending - maximizes recall. Fewer defaults missed, but more good farmers flagged for manual review."
         elif threshold <= 0.45:
-            interp = "Balanced-conservative — prioritizes catching risky farmers. Moderate review volume."
+            interp = "Balanced-conservative - prioritizes catching risky farmers. Moderate review volume."
         elif threshold <= 0.55:
-            interp = "Balanced (default) — equal weight to precision and recall."
+            interp = "Balanced (default) - equal weight to precision and recall."
         elif threshold <= 0.65:
-            interp = "Growth-focused — prioritizes precision. Fewer false alarms, but some risky farmers may slip through."
+            interp = "Growth-focused - prioritizes precision. Fewer false alarms, but some risky farmers may slip through."
         else:
-            interp = "Aggressive lending — maximizes precision. Most approved, minimal reviews, higher default risk."
+            interp = "Aggressive lending - maximizes precision. Most approved, minimal reviews, higher default risk."
 
         color = "#2e7d32" if threshold >= 0.50 else "#f57f17" if threshold >= 0.35 else "#c62828"
         st.markdown(f"""<div style="border-left:4px solid {color};padding:0.5rem 0.75rem;margin:0.5rem 0;background:{color}10;border-radius:4px;"><strong>Current strategy:</strong> {interp}</div>""", unsafe_allow_html=True)
@@ -1446,7 +1446,7 @@ elif page == "Model Evaluation":
             [f"FN: {fn} (missed default)", f"TP: {tp} (caught correctly)"],
         ], index=["Actual: Repays", "Actual: Defaults"], columns=["Pred: Repays", "Pred: Defaults"])
         st.dataframe(cm_df, use_container_width=True)
-        st.caption(f"FP = lost business opportunity ({fp} farmers). FN = missed default risk ({fn} farmers — more expensive).")
+        st.caption(f"FP = lost business opportunity ({fp} farmers). FN = missed default risk ({fn} farmers - more expensive).")
 
         # Trade-off chart
         st.markdown("#### Precision-Recall by Threshold")
@@ -1478,12 +1478,12 @@ elif page == "Model Evaluation":
         if fn_examples:
             st.markdown("#### 🔴 False Negatives (Missed Defaults)")
             for ex in fn_examples:
-                st.warning(f"**{ex['name']}** — Actual: High Risk, Predicted: {ex['predicted_risk_score']:.1%} (below {threshold:.0%} threshold) | DTI: {ex['dti']:.1%} | DSCR: {ex['dscr']:.2f} | Liquidity: {ex['liquidity_status']}")
+                st.warning(f"**{ex['name']}** - Actual: High Risk, Predicted: {ex['predicted_risk_score']:.1%} (below {threshold:.0%} threshold) | DTI: {ex['dti']:.1%} | DSCR: {ex['dscr']:.2f} | Liquidity: {ex['liquidity_status']}")
 
         if fp_examples:
             st.markdown("#### 🟡 False Positives (Unnecessary Flags)")
             for ex in fp_examples:
-                st.info(f"**{ex['name']}** — Actual: Low Risk, Predicted: {ex['predicted_risk_score']:.1%} (above {threshold:.0%} threshold) | DTI: {ex['dti']:.1%} | DSCR: {ex['dscr']:.2f} | Liquidity: {ex['liquidity_status']}")
+                st.info(f"**{ex['name']}** - Actual: Low Risk, Predicted: {ex['predicted_risk_score']:.1%} (above {threshold:.0%} threshold) | DTI: {ex['dti']:.1%} | DSCR: {ex['dscr']:.2f} | Liquidity: {ex['liquidity_status']}")
 
         if not fn_examples and not fp_examples:
             st.success("No misclassifications at this threshold.")
@@ -1503,7 +1503,7 @@ elif page == "Model Evaluation":
         # ---- Cross-Scenario Robustness ----
         st.markdown("---")
         st.markdown("### 🌍 Cross-Scenario Robustness")
-        st.markdown("""<div class="info-box"><strong>Frozen model v1.1.0</strong> — evaluated on 5 independently generated synthetic populations (200 farmers each) without retraining. Stress scenarios simulate economic shocks: drought, commodity price collapse, and interest rate hikes.</div>""", unsafe_allow_html=True)
+        st.markdown("""<div class="info-box"><strong>Frozen model v1.1.0</strong> - evaluated on 5 independently generated synthetic populations (200 farmers each) without retraining. Stress scenarios simulate economic shocks: drought, commodity price collapse, and interest rate hikes.</div>""", unsafe_allow_html=True)
 
         scenarios = {
             "Normal A": {"risk": 54, "color": "#2e7d32", "desc": "Baseline (seed=999)"},
@@ -1547,7 +1547,7 @@ elif page == "Model Evaluation":
         st.markdown("""
         <div style="border-left:4px solid #2e7d32;padding:0.75rem;margin:0.75rem 0;background:#e8f5e9;border-radius:4px;">
         <strong>Key finding:</strong> The model generalizes across independently generated synthetic populations and simulated economic stress scenarios.
-        Under drought, commodity crash, and interest rate shocks, the risk distribution shifts in economically sensible directions —
+        Under drought, commodity crash, and interest rate shocks, the risk distribution shifts in economically sensible directions -
         higher proportions of farmers are correctly identified as high-risk <em>without retraining</em>.
         </div>
         """, unsafe_allow_html=True)
@@ -1572,7 +1572,7 @@ elif page == "Data Quality":
     st.markdown("""
     <div class="info-box">
     Complete preprocessing pipeline: validation, missing values, duplicates,
-    outliers, and ambiguity detection. Issues are flagged — never silently removed.
+    outliers, and ambiguity detection. Issues are flagged - never silently removed.
     </div>
     """, unsafe_allow_html=True)
 
@@ -1643,22 +1643,22 @@ elif page == "Data Quality":
             with st.expander(f"🔴 Validation Errors ({len(farmer_dq['validation'])})", expanded=True):
                 for v in farmer_dq["validation"][:10]:
                     icon = "🔴" if v.get("severity") == "high" else "🟡"
-                    st.warning(f"{icon} **{v.get('field')}**: {v.get('message')} — _{v.get('action')}_")
+                    st.warning(f"{icon} **{v.get('field')}**: {v.get('message')} - _{v.get('action')}_")
 
         if farmer_dq.get("outliers"):
             with st.expander(f"⚠️ Outliers ({len(farmer_dq['outliers'])})", expanded=True):
                 for o in farmer_dq["outliers"][:10]:
-                    st.info(f"📊 **{o.get('field')}**: {o.get('message')} — _{o.get('action')}_")
+                    st.info(f"📊 **{o.get('field')}**: {o.get('message')} - _{o.get('action')}_")
 
         if farmer_dq.get("duplicates"):
             with st.expander(f"🔄 Duplicates ({len(farmer_dq['duplicates'])})"):
                 for d in farmer_dq["duplicates"]:
-                    st.warning(f"{d.get('message')} — _{d.get('action')}_")
+                    st.warning(f"{d.get('message')} - _{d.get('action')}_")
 
         if farmer_dq.get("ambiguities"):
             with st.expander(f"⚡ Data Ambiguities ({len(farmer_dq['ambiguities'])})", expanded=True):
                 for a in farmer_dq["ambiguities"]:
-                    st.error(f"**{a.get('field')}**: {a.get('message')} — _{a.get('action')}_")
+                    st.error(f"**{a.get('field')}**: {a.get('message')} - _{a.get('action')}_")
 
     # ML Pipeline info
     st.markdown("---")
@@ -1724,6 +1724,6 @@ elif page == "Data Quality":
         # Scaling note
         st.info(eval_data.get("scaling_note", "").split("\n")[0])
 st.caption(
-    "🌱 AgriSense AI — Explainable AI Decision Support for Agricultural Finance | "
+    "🌱 AgriSense AI - Explainable AI Decision Support for Agricultural Finance | "
     "For demo purposes only | The final lending decision is always made by a human."
 )

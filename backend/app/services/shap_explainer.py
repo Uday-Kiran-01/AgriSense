@@ -1,5 +1,5 @@
 """
-SHAP Explainability (Optional — requires `pip install shap`)
+SHAP Explainability (Optional - requires `pip install shap`)
 
 Provides per-prediction explanations: WHY did THIS specific farmer
 get THIS specific risk score?

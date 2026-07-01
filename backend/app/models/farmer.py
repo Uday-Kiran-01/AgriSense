@@ -1,5 +1,5 @@
 """
-Farmer model — the core entity in AgriSense.
+Farmer model - the core entity in AgriSense.
 """
 from datetime import datetime
 

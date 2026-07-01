@@ -160,15 +160,15 @@ def run_liquidity_stress_test(
 
     # Overall assessment
     if total_negative_months == 0:
-        liquidity_rating = "Strong — positive cash flow every month"
+        liquidity_rating = "Strong - positive cash flow every month"
     elif total_negative_months <= 3 and can_meet_obligations:
-        liquidity_rating = "Adequate — seasonal stress but reserves sufficient"
+        liquidity_rating = "Adequate - seasonal stress but reserves sufficient"
     elif total_negative_months <= 6 and can_meet_obligations:
-        liquidity_rating = "Seasonal — significant pre-harvest cash burn. Reserves needed."
+        liquidity_rating = "Seasonal - significant pre-harvest cash burn. Reserves needed."
     elif can_meet_obligations:
-        liquidity_rating = "Stretched — most months negative. Requires substantial reserves."
+        liquidity_rating = "Stretched - most months negative. Requires substantial reserves."
     else:
-        liquidity_rating = "Critical — projected to run out of cash. Working capital loan recommended."
+        liquidity_rating = "Critical - projected to run out of cash. Working capital loan recommended."
 
     # What if commodity prices drop 20%?
     stress_revenue = annual_revenue * 0.80
@@ -184,7 +184,7 @@ def run_liquidity_stress_test(
 
     logger.info(f"Liquidity stress test: {total_negative_months} negative months, "
                 f"worst={worst_month['name']} ({worst_month['net_cash']:,.0f} kr), "
-                f"rating={liquidity_rating.split(' —')[0]}")
+                f"rating={liquidity_rating.split(' -')[0]}")
 
     return {
         "monthly_cash_flows": months,

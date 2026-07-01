@@ -4,19 +4,19 @@
 
 AgriSense AI doesn't try to automate lending decisions. It structures fragmented agricultural, financial, and environmental information into an explainable decision-support workflow. The platform combines deterministic financial analysis, machine learning predictions, seasonal liquidity modelling, scenario simulation, and peer benchmarking to help both farmers and lenders understand not only the predicted risk, but also why that risk exists and how it changes under different decisions.
 
-> 🇸🇪 **Swedish Demo** — Synthetic data, SEK currency, GDPR compliant. 2,500 farm portfolio across 11 regions.
+> 🇸🇪 **Swedish Demo** - Synthetic data, SEK currency, GDPR compliant. 2,500 farm portfolio across 11 regions.
 
 🔗 **Live:** [github.com/Uday-Kiran-01/AgriSense](https://github.com/Uday-Kiran-01/AgriSense)
 
 ---
 ## 🔒 GDPR & Data Privacy
 
-- **All data is synthetic** — No real personal data, names, addresses, or financial figures
-- **Fictional farmer identity** — "Erik Johansson" is a constructed persona
-- **No persistent PII** — The SQLite database contains only demo data, wiped on restart
-- **No tracking or cookies** — The Streamlit dashboard has no analytics
-- **Document references are placeholders** — No real PDFs or uploaded files
-- **Swedish context** — UC credit scores, Landshypotek/Swedbank lenders, EU CAP subsidies
+- **All data is synthetic** - No real personal data, names, addresses, or financial figures
+- **Fictional farmer identity** - "Erik Johansson" is a constructed persona
+- **No persistent PII** - The SQLite database contains only demo data, wiped on restart
+- **No tracking or cookies** - The Streamlit dashboard has no analytics
+- **Document references are placeholders** - No real PDFs or uploaded files
+- **Swedish context** - UC credit scores, Landshypotek/Swedbank lenders, EU CAP subsidies
 
 ---
 
@@ -100,11 +100,11 @@ Analysis     (Weather, Commodity, EU CAP)
   Bank Loan Officer Dashboard ─── HUMAN MAKES FINAL DECISION
 ```
 
-> ⚡ **Key design choice**: Training and inference use the **same preprocessing pipeline**. Median values, feature order, and encoding maps are saved during training and reloaded at inference — no train/serve skew.
+> ⚡ **Key design choice**: Training and inference use the **same preprocessing pipeline**. Median values, feature order, and encoding maps are saved during training and reloaded at inference - no train/serve skew.
 
 ---
 
-## 🎯 Oscar's Questions — Answered
+## 🎯 Oscar's Questions - Answered
 
 | Question | Module |
 |---|---|
@@ -130,7 +130,7 @@ Analysis     (Weather, Commodity, EU CAP)
 
 > Business rules validate. Financial formulas calculate. ML predicts. Gemini explains.
 
-### The Model Learns — We Don't Hardcode
+### The Model Learns - We Don't Hardcode
 
 8 farmer profiles with probabilistic outcomes. The model sees features, not profiles.
 
@@ -145,7 +145,7 @@ Analysis     (Weather, Commodity, EU CAP)
 | Organic Premium | 5% | ~6% | Higher revenue/ha offsets higher costs → moderate risk |
 | Tenant | 2% | ~15% | No land collateral + leased + variable costs → distinct risk pattern |
 
-> The model never receives the profile label or the default probability. It only sees financial, operational, and environmental features. It discovers risk patterns from the data — including how "no credit history" interacts differently with strong vs. weak financials.
+> The model never receives the profile label or the default probability. It only sees financial, operational, and environmental features. It discovers risk patterns from the data - including how "no credit history" interacts differently with strong vs. weak financials.
 
 ### Target Variable
 
@@ -154,14 +154,14 @@ The Random Forest predicts:
 - **Repayment Probability** (regressor): Continuous 0–1 estimate
 - **Debt Capacity** (regressor): Maximum additional loan amount (SEK)
 
-Labels are generated probabilistically: a farmer from the "Struggling" profile has a ~45% chance of being labeled as default, not 100%. This creates realistic class overlap — some struggling farmers do repay, and some established farmers don't. The model must learn from patterns, not memorize profiles.
+Labels are generated probabilistically: a farmer from the "Struggling" profile has a ~45% chance of being labeled as default, not 100%. This creates realistic class overlap - some struggling farmers do repay, and some established farmers don't. The model must learn from patterns, not memorize profiles.
 
 ---
 
 ## 📋 Model Card
 
 ### Purpose
-Predict repayment risk and debt capacity for Swedish agricultural businesses to **support — not replace — human lending decisions.**
+Predict repayment risk and debt capacity for Swedish agricultural businesses to **support - not replace - human lending decisions.**
 
 ### Training Data
 2,500 synthetic Swedish agricultural businesses representing 8 portfolio profiles. All data is synthetic (no real PII). Dataset v1.0.
@@ -187,9 +187,9 @@ Random Forest (scikit-learn). 3 separate models (classifier + 2 regressors). Hyp
 5-fold StratifiedKFold cross-validation. Metrics: Precision, Recall, F1, ROC-AUC, Confusion Matrix. Optimized for recall (False Negatives = missed defaults = expensive).
 
 ### Limitations
-- **Synthetic data** — patterns may differ from real-world agricultural lending
-- **Simplified assumptions** — no macroeconomic shocks, no policy changes
-- **Swedish context only** — not validated for other regions or regulatory regimes
+- **Synthetic data** - patterns may differ from real-world agricultural lending
+- **Simplified assumptions** - no macroeconomic shocks, no policy changes
+- **Swedish context only** - not validated for other regions or regulatory regimes
 - **Not suitable for production** lending decisions without real-data validation
 - **CAP dependency**: Treats subsidies as farmer-level features. Does not model systemic policy changes (e.g., EU CAP reform) that would affect the entire portfolio simultaneously.
 - **Portfolio correlation**: Evaluates farmers individually. Does not model correlated defaults across a lender's portfolio (e.g., all wheat farmers in Skåne affected by a single price collapse).
@@ -199,17 +199,17 @@ Random Forest (scikit-learn). 3 separate models (classifier + 2 regressors). Hyp
 - **Model governance**: Version, training date, and validation metrics are tracked. Automated retraining and formal validation processes are documented as future work.
 
 ### Ethical Considerations
-- All recommendations are **advisory** — final decisions remain with human loan officers
+- All recommendations are **advisory** - final decisions remain with human loan officers
 - No demographic features (age, gender, ethnicity) used as model inputs
 - Synthetic dataset designed for representative coverage across farm sizes, regions, and credit profiles
-- Model confidence is reported alongside predictions — low-confidence predictions are flagged for manual review
+- Model confidence is reported alongside predictions - low-confidence predictions are flagged for manual review
 - Decision Readiness layer identifies insufficient evidence and recommends human intervention
 
 ---
 
 ## � Robustness Evaluation
 
-> **The model was trained once and frozen (v1.1.0). All evaluations below use that same frozen model — no retraining between tests.**
+> **The model was trained once and frozen (v1.1.0). All evaluations below use that same frozen model - no retraining between tests.**
 
 ### Evaluation Design
 
@@ -217,8 +217,8 @@ Random Forest (scikit-learn). 3 separate models (classifier + 2 regressors). Hyp
 |---|---|
 | **Population stability** | Two independently generated synthetic populations (seed=999, seed=2026) with shifted feature distributions |
 | **Economic stress** | Three simulated shocks applied to evaluation data: drought (15-30% revenue drop), commodity price crash (20-35% drop), interest rate increase (+3 percentage points) |
-| **Label independence** | Stress scenario labels reflect changed financial conditions — the model must identify genuinely elevated risk, not just reproduce training distributions |
-| **Frozen model** | v1.1.0 Random Forest — trained once, evaluated five times |
+| **Label independence** | Stress scenario labels reflect changed financial conditions - the model must identify genuinely elevated risk, not just reproduce training distributions |
+| **Frozen model** | v1.1.0 Random Forest - trained once, evaluated five times |
 
 ### Results (5 scenarios × 200 farmers each)
 
@@ -243,11 +243,11 @@ Commodity Crash         ██████████████████�
 Interest Shock          ████████████████████████████████████████████████████████████████████████████████████ 84%
 ```
 
-> **The stress scenarios produce stronger separation between low- and high-risk cases in the synthetic data. As a result, the frozen model classifies them more easily, leading to higher evaluation metrics under stress.** This is the expected behavior — the model responds sensibly to changing economic conditions, not by chance but because it has learned the relationships between features and risk within the synthetic feature space.
+> **The stress scenarios produce stronger separation between low- and high-risk cases in the synthetic data. As a result, the frozen model classifies them more easily, leading to higher evaluation metrics under stress.** This is the expected behavior - the model responds sensibly to changing economic conditions, not by chance but because it has learned the relationships between features and risk within the synthetic feature space.
 
 ### Key Finding
 
-The model generalizes across independently generated synthetic populations and simulated economic stress scenarios. Under drought, commodity crash, and interest rate shocks, the risk distribution shifts in economically sensible directions — higher proportions of farmers are correctly identified as high-risk without retraining.
+The model generalizes across independently generated synthetic populations and simulated economic stress scenarios. Under drought, commodity crash, and interest rate shocks, the risk distribution shifts in economically sensible directions - higher proportions of farmers are correctly identified as high-risk without retraining.
 
 ---
 
@@ -255,7 +255,7 @@ The model generalizes across independently generated synthetic populations and s
 
 - Stable performance across independently generated synthetic populations
 - Sensible responses to simulated economic shocks (drought, commodity prices, interest rates)
-- A reproducible evaluation pipeline with a frozen model — the same model evaluated under different conditions
+- A reproducible evaluation pipeline with a frozen model - the same model evaluated under different conditions
 - The model learned relationships within the synthetic feature space rather than memorizing individual examples
 
 ### What This Evaluation Does NOT Demonstrate
@@ -265,7 +265,7 @@ The model generalizes across independently generated synthetic populations and s
 - Production readiness without validation on real-world datasets
 - Generalization beyond the synthetic data generation framework
 
-> **Why acknowledging limitations matters:** Ironclad claims about generalization to real farmers would be impossible to defend. Precise claims about generalization within the synthetic simulation framework — backed by frozen-model evaluation under multiple conditions — are credible and verifiable.
+> **Why acknowledging limitations matters:** Ironclad claims about generalization to real farmers would be impossible to defend. Precise claims about generalization within the synthetic simulation framework - backed by frozen-model evaluation under multiple conditions - are credible and verifiable.
 
 ---
 ## 📝 Lessons Learned
@@ -274,7 +274,7 @@ The model generalizes across independently generated synthetic populations and s
 
 ### The Benchmark That Was Too Good
 
-During multi-model benchmarking, tree-based models achieved near-perfect scores (F1=1.000, ROC-AUC=1.000). This was **not** a signal of model quality — it was a signal to investigate.
+During multi-model benchmarking, tree-based models achieved near-perfect scores (F1=1.000, ROC-AUC=1.000). This was **not** a signal of model quality - it was a signal to investigate.
 
 **Root cause discovery:**
 
@@ -295,13 +295,13 @@ Feature importance analysis confirmed the diagnosis:
 | Weather (drought_index) | **0.0%** |
 | Commodity (price_change) | **0.0%** |
 
-The model wasn't learning "which farmers default" — it was reverse-engineering the label generation rule. The external data features (weather, commodity prices) contributed zero because every synthetic farmer received identical values (drought_index=0.23, price_change_pct=0.018).
+The model wasn't learning "which farmers default" - it was reverse-engineering the label generation rule. The external data features (weather, commodity prices) contributed zero because every synthetic farmer received identical values (drought_index=0.23, price_change_pct=0.018).
 
 **Why this improves the project:**
 
-This discovery demonstrates exactly what senior ML engineers do: critically evaluate results, identify when metrics are misleading, and reframe the narrative around credible evidence. The deployment simulation — frozen model evaluated on independent synthetic populations under economic stress — provides a more honest assessment of system behavior than inflated benchmark scores.
+This discovery demonstrates exactly what senior ML engineers do: critically evaluate results, identify when metrics are misleading, and reframe the narrative around credible evidence. The deployment simulation - frozen model evaluated on independent synthetic populations under economic stress - provides a more honest assessment of system behavior than inflated benchmark scores.
 
-**Production fix:** With region-varying SMHI weather data and real commodity price fluctuations, the external features would naturally gain variance and importance. The architecture is ready — all 5 free public APIs are integrated with mock fallbacks.
+**Production fix:** With region-varying SMHI weather data and real commodity price fluctuations, the external features would naturally gain variance and importance. The architecture is ready - all 5 free public APIs are integrated with mock fallbacks.
 
 ---
 ## �🧱 Tech Stack
@@ -342,7 +342,7 @@ pip install -r requirements.txt
 
 ```bash
 cp .env.example .env
-# Edit .env with your API keys (optional — works without them)
+# Edit .env with your API keys (optional - works without them)
 ```
 
 ### 3. Run Backend
@@ -416,7 +416,7 @@ AgriSense/
 ## 📊 Key Features
 
 ### 🔐 Digital Farmer Vault
-Centralized document storage for all financing-related documents — balance sheets, bank statements, loan agreements, land records, crop reports, insurance.
+Centralized document storage for all financing-related documents - balance sheets, bank statements, loan agreements, land records, crop reports, insurance.
 
 ### 💰 Financial Analysis Engine
 Calculates 10+ financial ratios:
@@ -460,7 +460,7 @@ The full preprocessing and ML pipeline runs before any prediction:
 | **1. Validation** | Rule-based checks (min/max bounds) | Rejects impossible values (e.g., negative revenue, 80% interest rate) |
 | **2. Missing Values** | Strategy varies by data type | Median imputation for financials, mode for operational, API backfill for weather |
 | **3. Duplicates** | Hash-based key detection | Prevents double-counting financial records |
-| **4. Outliers** | IQR method — **flag only** | Never auto-removes. Banks need manual review of anomalies |
+| **4. Outliers** | IQR method - **flag only** | Never auto-removes. Banks need manual review of anomalies |
 | **5. Standardization** | Currency, unit, date conversion | SEK/EUR/USD → SEK, acres → hectares, ISO dates |
 | **6. Ambiguity** | Cross-document field comparison | Conflicting revenue across documents → flagged for review |
 | **7. Feature Engineering** | 15 derived features | Debt Ratio, Revenue/Ha, Rainfall Deviation, Repayment Ratio, etc. |
@@ -477,16 +477,16 @@ The full preprocessing and ML pipeline runs before any prediction:
 
 Current demo uses synthetic data (dataset v1.0: 2,500 Swedish farmers). For production:
 
-- **Missing financials**: Median imputation by farm size bracket — preserves distribution per cohort. Same medians saved at training time and reused at inference.
+- **Missing financials**: Median imputation by farm size bracket - preserves distribution per cohort. Same medians saved at training time and reused at inference.
 - **Missing weather**: API backfill from SMHI/OpenWeatherMap with fallback to 5-year regional average.
-- **Conflicting documents**: Revenue mismatch >10% across documents = automatic flag for manual review. System presents both values with sources — never auto-resolves.
-- **Invalid values**: Rejected at validation boundary — never silently corrected. Loan officer is notified of the specific field and violation.
+- **Conflicting documents**: Revenue mismatch >10% across documents = automatic flag for manual review. System presents both values with sources - never auto-resolves.
+- **Invalid values**: Rejected at validation boundary - never silently corrected. Loan officer is notified of the specific field and violation.
 - **Pipeline consistency**: Same preprocessing used during training is reused during inference. No train/serve skew.
-- **Feature store**: All 15 features computed deterministically from raw inputs — reproducible predictions, auditable at any point.
+- **Feature store**: All 15 features computed deterministically from raw inputs - reproducible predictions, auditable at any point.
 
 ### ⚖️ Data Leakage Prevention
 
-Only information available **before** a loan decision is used as input features. Future repayment outcomes serve exclusively as training labels — never as input features. The train/test split respects temporal ordering: no future data appears in training. This is critical for lending models where look-ahead bias would produce unrealistically optimistic evaluations.
+Only information available **before** a loan decision is used as input features. Future repayment outcomes serve exclusively as training labels - never as input features. The train/test split respects temporal ordering: no future data appears in training. This is critical for lending models where look-ahead bias would produce unrealistically optimistic evaluations.
 
 ### 🎯 Configurable Risk Threshold
 
@@ -502,7 +502,7 @@ Risk scores >0.65 trigger an automatic **Manual Review Required** flag regardles
 
 ### 🌍 Bias Awareness
 
-The synthetic dataset was generated with representative distributions across Swedish regions (Skåne, Västra Götaland, Östergötland, etc.), farm sizes (10–500 ha), crop types, and credit profiles (UC scores 350–890). No demographic features (age, gender, ethnicity) are used as model inputs — only financial, operational, and environmental indicators.
+The synthetic dataset was generated with representative distributions across Swedish regions (Skåne, Västra Götaland, Östergötland, etc.), farm sizes (10–500 ha), crop types, and credit profiles (UC scores 350–890). No demographic features (age, gender, ethnicity) are used as model inputs - only financial, operational, and environmental indicators.
 
 ---
 

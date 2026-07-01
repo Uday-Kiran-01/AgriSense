@@ -1,5 +1,5 @@
 """
-FinancialRecord model — stores extracted financial data per year.
+FinancialRecord model - stores extracted financial data per year.
 """
 from datetime import datetime
 
