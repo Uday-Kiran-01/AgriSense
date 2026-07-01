@@ -119,7 +119,7 @@ html,body,[class*="css"]{font-family:'Inter',sans-serif}
 }
 
 /* ── Landing ── */
-.landing{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;text-align:center;position:relative;z-index:1}
+.landing{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:40vh;text-align:center;position:relative;z-index:1}
 .landing h1{font-family:'Space Grotesk',sans-serif;font-size:3.5rem;font-weight:700;background:linear-gradient(135deg,#f7d774 0%,#e8962e 40%,#c45a1a 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-0.04em;margin:0;filter:drop-shadow(0 0 30px rgba(232,150,46,0.3))}
 .landing .sub{color:#7a8a9e;font-size:1.15rem;margin:1rem 0 3rem 0}
 
