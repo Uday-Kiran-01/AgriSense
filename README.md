@@ -1,40 +1,14 @@
 ---
-title: AgriSense AI
-emoji: 🌱
-colorFrom: green
-colorTo: amber
-sdk: streamlit
-sdk_version: 1.36.0
+title: Agri Sense
+emoji: 👀
+colorFrom: gray
+colorTo: pink
+sdk: gradio
+sdk_version: 6.19.0
+python_version: '3.13'
 app_file: app.py
 pinned: false
-license: mit
+short_description: Explainable AI for Agricultural Financing
 ---
 
-# 🌱 AgriSense AI
-
-**Explainable AI Decision Support for Agricultural Finance**
-
-A three-role Streamlit dashboard simulating the agricultural lending workflow:
-- 👨‍🌾 **Farmer** — 5-step wizard: Welcome → Documents → Farm Details → Analysis → Results
-- 🏢 **Credit Analyst** — Pipeline review, financial analysis, decision memo generation
-- 🏦 **Bank Officer** — Final decision with AI recommendation and human oversight
-
-## Features
-- Random Forest ML models (credit risk, repayment probability, debt capacity)
-- Colorful filter cards with emoji indicators
-- Dark-themed responsive UI (desktop + mobile)
-- Real-time timestamps
-- Scenario simulation (tractor purchase, etc.)
-- Decision memo with AI-generated recommendations
-- 8-step application timeline
-
-## Tech Stack
-- Streamlit 1.36+
-- scikit-learn Random Forest
-- Plotly charts
-- SQLite + SQLAlchemy (backend)
-- FastAPI (backend)
-
-## Disclaimer
-⚠️ **Advisory Only** — Final lending decisions are made by qualified human officers.
-All data is synthetic. Swedish demo (SEK currency, GDPR compliant).
+Check out the configuration reference at https://huggingface.co/docs/hub/spaces-config-reference
