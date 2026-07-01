@@ -79,7 +79,7 @@ async def _fetch_smhi_station_data(station_key: str, parameter: int) -> dict | N
     """Fetch latest data for a specific SMHI station and parameter."""
     url = (
         f"{settings.SMHI_BASE_URL}/parameter/{parameter}"
-        f"/station/{station_key}/period/latest-hour.json"
+        f"/station/{station_key}/period/latest-day/data.json"
     )
     try:
         async with httpx.AsyncClient() as client:
@@ -88,12 +88,19 @@ async def _fetch_smhi_station_data(station_key: str, parameter: int) -> dict | N
                 data = resp.json()
                 values = data.get("value", [])
                 if values:
+                    latest = values[-1]
+                    # SMHI returns dates as Unix milliseconds
+                    raw_date = latest.get("date")
+                    date_str = None
+                    if raw_date and isinstance(raw_date, (int, float)):
+                        from datetime import datetime, timezone
+                        date_str = datetime.fromtimestamp(raw_date / 1000, tz=timezone.utc).strftime("%Y-%m-%d %H:%M")
                     return {
                         "station_name": data.get("station", {}).get("name", station_key),
                         "parameter_name": data.get("parameter", {}).get("title", ""),
                         "unit": data.get("unit", ""),
-                        "latest_value": values[-1].get("value"),
-                        "latest_date": values[-1].get("date"),
+                        "latest_value": latest.get("value"),
+                        "latest_date": date_str or str(raw_date),
                         "num_values": len(values),
                     }
     except Exception as e:
