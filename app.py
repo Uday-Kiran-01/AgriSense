@@ -564,7 +564,10 @@ def product_banner(pred, role_label):
 
 # ═══════════════ TIMELINE ═══════════════
 def timeline(pred, r, expanded_sections):
-    """Render the 8-step application journey timeline."""
+    """Render the 8-step application journey timeline. Click any step to expand/collapse."""
+    if "timeline_expanded" not in st.session_state:
+        st.session_state.timeline_expanded = set()
+
     steps = [
         (1, "Documents", "documents", "✅ Verified", True,
          lambda: st.markdown(f"✅ Bank Statements · ✅ Tax Returns · ✅ Land Registry · ✅ Loans · ⚠️ Machinery · ✅ Insurance\n\nReliability: **{CF().get('score',87)}%**")),
@@ -589,19 +592,25 @@ def timeline(pred, r, expanded_sections):
     ]
 
     for num, title, key, status, done, render_fn in steps:
-        num_cls = "done" if done else "active" if key in expanded_sections else ""
-        with st.container():
-            st.markdown(f"""
-            <div class="timeline-step">
-                <div class="timeline-header">
-                    <div class="timeline-num {num_cls}">{'✓' if done else num}</div>
-                    <div class="timeline-title">{title}</div>
-                    <div class="timeline-status" style="color:{'#34d399' if done else '#667085'}">{status}</div>
-                </div>
-            </div>""",unsafe_allow_html=True)
+        # Section is expanded if: toggled by user, OR in default expanded_sections, OR auto-expand rule
+        is_expanded = (key in st.session_state.timeline_expanded or
+                       key in expanded_sections or
+                       (done and key in ["financials","ai"]))
+        num_cls = "done" if done else "active" if is_expanded else ""
 
-        # Expand if requested
-        if key in expanded_sections or (done and key in ["financials","ai"]):
+        # Clickable header
+        arrow = "▼" if is_expanded else "▶"
+        if st.button(f"{arrow} {title} — {status}", key=f"tl_{key}",
+                     use_container_width=True,
+                     type="secondary"):
+            if key in st.session_state.timeline_expanded:
+                st.session_state.timeline_expanded.discard(key)
+            else:
+                st.session_state.timeline_expanded.add(key)
+            st.rerun()
+
+        # Expanded body
+        if is_expanded:
             st.markdown(f'<div class="timeline-body">',unsafe_allow_html=True)
             render_fn()
             st.markdown('</div>',unsafe_allow_html=True)
