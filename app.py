@@ -497,6 +497,31 @@ def financial_content(r, pred):
     with c2: st.metric("Debt-to-Income", f"{r.get('dti',0):.1%}")
     with c3: st.metric("Operating Margin", f"{r.get('om',0):.1%}")
     with c4: st.metric("Debt Capacity", f"{pred['cap']/1000:.0f}K kr" if pred else "N/A")
+    # Seasonal Cash Flow
+    cf = CF()
+    rev = CFIN()[0]['rev']
+    months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+    crop = cf.get("crop","Hostvete")
+    # Winter wheat: expenses spring, harvest Jul-Aug, income Aug-Sep
+    if crop in ("Hostvete","Varvete"):
+        inflow =  [0,0,0,0,0,0,30,40,20,10,0,0]
+        outflow = [5,5,10,15,10,10,5,5,5,5,5,5]
+    elif crop in ("Havre","Varkorn"):
+        inflow =  [0,0,0,5,10,10,25,30,15,5,0,0]
+        outflow = [5,5,10,10,10,10,5,5,5,5,5,5]
+    else:
+        inflow =  [5,5,5,5,10,15,20,20,10,5,0,0]
+        outflow = [5,5,5,10,10,10,5,5,5,5,5,5]
+    st.markdown('<div class="sec" style="margin-top:1.2rem;">Seasonal Cash Flow (% of annual)</div>',unsafe_allow_html=True)
+    bar_html = '<div style="display:flex;gap:3px;align-items:flex-end;height:60px;">'
+    for m, inn, out in zip(months, inflow, outflow):
+        net = inn - out
+        h = max(abs(net)*2, 4)
+        color = "#34d399" if net >= 0 else "#f87171"
+        bar_html += f'<div style="flex:1;text-align:center;font-size:0.55rem;color:#5a6a7e;"><div style="background:{color};height:{h}px;border-radius:3px 3px 0 0;"></div>{m}</div>'
+    bar_html += '</div>'
+    st.markdown(bar_html, unsafe_allow_html=True)
+    st.caption("🟢 Green = cash surplus month. 🔴 Red = cash deficit month. Swedish farms typically face spring pressure (seeds, fertilizer) before harvest income (Jul-Sep).")
 
 def ai_content(pred):
     if not pred: return
