@@ -459,7 +459,7 @@ def timeline(pred, r, expanded_sections):
         (3, "Financial Analysis", "financials", "✅ Complete", True,
          lambda: financial_content(r, pred)),
         (4, "External Intelligence", "external", "✅ Live", True,
-         lambda: st.markdown(f"🌦️ Weather: Normal ({CF().get('region','Skane')})  ·  📉 Wheat: 2.48 kr/kg (-1.8%)  ·  🦠 Disease Risk: Low  ·  💶 EU CAP: 115,000 kr")),
+         lambda: external_content()),
         (5, "AI Assessment", "ai", "✅ Complete", True,
          lambda: ai_content(pred)),
         (6, "Scenario Simulation", "scenario", "⚡ Run", False,
@@ -492,7 +492,21 @@ def timeline(pred, r, expanded_sections):
             render_fn()
             st.markdown('</div>',unsafe_allow_html=True)
 
-def financial_content(r, pred):
+def external_content():
+    cf = CF()
+    region = cf.get('region','Skane')
+    score = cf.get('score',87)
+    ha = cf.get('ha',85)
+    # Dynamic weather based on score (lower score = more adverse conditions)
+    weather_map = {80: "Favorable", 60: "Normal", 40: "Dry Spell", 0: "Drought Conditions"}
+    weather = weather_map.get((score//20)*20, "Normal")
+    w_emoji = "☀️" if score>=80 else "⛅" if score>=60 else "🌤️" if score>=40 else "🔥"
+    # Dynamic commodity price based on region and score
+    base_price = 2.48 if score>=60 else 2.12
+    price_change = -1.8 if score>=60 else -8.5
+    # CAP subsidy scales with farm size
+    cap = int(ha * 1350)
+    st.markdown(f"{w_emoji} Weather: {weather} ({region})  ·  📉 Wheat: {base_price:.2f} kr/kg ({price_change:+.1f}%)  ·  🦠 Disease Risk: {'Low' if score>=70 else 'Moderate' if score>=50 else 'Elevated'}  ·  💶 EU CAP: {cap:,} kr")
     c1,c2,c3,c4 = st.columns(4)
     with c1: st.metric("DSCR", f"{r.get('dscr',0):.2f}x")
     with c2: st.metric("Debt-to-Income", f"{r.get('dti',0):.1%}")
@@ -943,6 +957,15 @@ def farmer_dashboard():
         st.info("📤 Your application is being processed. You'll be notified when the bank reviews it.")
     else:
         st.success("Decision received! View the details above.")
+    st.caption("")
+    if st.button("🔄 Start New Application", use_container_width=True):
+        st.session_state.farmer_submitted = False
+        st.session_state.farmer_step = 1
+        st.session_state.memo_generated = False
+        st.session_state.memo_sent = False
+        st.session_state.bank_decision = None
+        st.session_state.scenario_result = None
+        st.rerun()
 
 # ═══════════════ 🏢 CREDIT ANALYST ═══════════════
 def analyst_view():
