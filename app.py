@@ -702,7 +702,7 @@ def landing():
         if st.button("Bank View",key="lb",use_container_width=True,type="primary"): st.session_state.role="bank";st.rerun()
     st.markdown('</div></div>',unsafe_allow_html=True)
     st.divider()
-    st.caption("2,500 farmers · 11 regions · v1.1.0 · 5 free APIs · Advisory only")
+    st.caption("2,500 farmers · 11 regions · v1.1.0 · Advisory only")
 
 # ═══════════════ TOP BAR ═══════════════
 def top_bar(role, label):
@@ -903,6 +903,15 @@ def farmer_dashboard():
     elif memo_sent:
         st.markdown('<span class="badge badge-y" style="font-size:0.8rem;">📤 Sent to Bank</span>',unsafe_allow_html=True)
         st.caption("Your application is with the bank officer for final decision.")
+        # Show the memo summary to the farmer
+        with st.expander("📋 View Credit Assessment"):
+            st.markdown(f"""
+            **Financial Summary:** Revenue {CFIN()[0]['rev']/1000:.0f}K kr · DSCR {r.get('dscr',0):.2f}x · DTI {r.get('dti',0):.1%}
+            
+            **AI Assessment:** Risk {pred['risk']:.1%} · Repayment {pred['repay']:.1%} · Level {pred['level']}
+            
+            **Recommendation:** {"Proceed with standard terms." if pred['level']=='Low' else 'Proceed with conditions. Close monitoring advised.' if pred['level']=='Medium' else 'Manual review required. Additional guarantees may be needed.'}
+            """)
     elif memo_gen:
         st.markdown('<span class="badge badge-y" style="font-size:0.8rem;">📝 Under Review</span>',unsafe_allow_html=True)
         st.caption("A credit analyst has prepared your assessment.")
