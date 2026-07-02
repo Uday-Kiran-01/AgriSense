@@ -310,7 +310,7 @@ Streamlit re-executes the entire script on every interaction. Five session_state
 
 | Mechanism | Keys | Purpose |
 |-----------|------|---------|
-| `pipeline_overrides` | `{farmer_name: status}` | Pipeline status survives reruns — Submitted, Sent to Bank, Approved |
+| `pipeline_overrides` | `{farmer_name: status}` | Pipeline status survives reruns - Draft → Submitted → In Review → Sent to Bank → Approved |
 | `farmer_profiles` | `{farmer_name: {crop, ha, years, insurance}}` | Farmer form inputs visible to analyst and bank |
 | `farmer_user` | string | Current logged-in farmer (set on registration or landing page) |
 | Role + app selectors | `role`, `analyst_app`, `bank_app` | Which view and which farmer is active |
@@ -353,7 +353,7 @@ Custom farmers are stored in `agrisense_farmers.db` (auto-created on first run):
 The persistent product banner shows the current farmer's ID, location, farm details, and dynamically computed status. Status transitions through the workflow:
 
 ```
-READY FOR ASSESSMENT → SUBMITTED → UNDER REVIEW → SENT TO BANK → DECIDED
+DRAFT → SUBMITTED → IN REVIEW → SENT TO BANK → DECIDED
 ```
 
 Status is determined by checking session_state in priority order: `bank_decision → memo_sent → memo_generated → pipeline_overrides → PIPELINE default`.

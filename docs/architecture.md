@@ -128,7 +128,7 @@ flowchart TB
 | ML predictions | **Real** | Random Forest x3 on 15 features via joblib |
 | Feature scaling | **Real** | ha_scale + crop_multiplier from farmer input |
 | Scenario simulation | **Real** | Re-runs predict() with modified drought/price params |
-| Pipeline status flow | **Real** | session_state overrides survive Streamlit reruns |
+| Pipeline status flow | **Real** | Draft → Submitted → In Review → Sent to Bank → Approved/Rejected |
 | Custom farmer registration | **Real** | SQLite persistence, auto-login after registration |
 | External intelligence | **Demo** | Template-based weather/prices, not live APIs |
 | Farmer data (8 built-in) | **Demo** | Synthetic Swedish farmers, GDPR-safe |

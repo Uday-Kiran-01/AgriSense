@@ -8,7 +8,7 @@ Live demo: [huggingface.co/spaces/SuperNitro/Agri-Sense](https://huggingface.co/
 
 AgriSense AI combines financial, operational, and environmental data into a transparent lending workflow. It never approves loans — it prepares evidence for humans who do.
 
-> 🇸🇪 Swedish demo · Synthetic data · SEK currency · GDPR compliant · 2,500 farmers · 11 regions
+> 🇸🇪 Swedish demo · Synthetic data · SEK currency · GDPR compliant · 8 demo farmers · 11 regions
 
 ---
 
@@ -16,34 +16,38 @@ AgriSense AI combines financial, operational, and environmental data into a tran
 
 | Role | Workflow |
 |------|----------|
-| 👨‍🌾 **Farmer** | 5-step wizard: Documents → Farm Details → Analysis → Results → Submit |
-| 🏢 **Credit Analyst** | Pipeline with filter cards, financial analysis, SHAP explanations, decision memo generation |
-| 🏦 **Bank Officer** | Review workspace with recommendation, scenario simulation, final approve/condition/reject |
+| 👨‍🌾 **Farmer** | 5-step wizard → Submit to Credit Analyst → Track status → See bank decision |
+| 🏢 **Credit Analyst** | Pipeline with filters → 7-tab review workspace → Financial ratios → Scenario sim → Memo → Send to Bank |
+| 🏦 **Bank Officer** | Pipeline → 8-tab workspace with Decision tab → Approve / Conditions / Reject |
+
+**Pipeline:** Draft → Submitted → In Review → Sent to Bank → Approved/Rejected
 
 ---
 
 ## Architecture
 
+Standalone Streamlit app (`app.py`, ~1,400 lines) — no backend required for the demo.
+
 ```
-Users → Streamlit → FastAPI → Routers (3) → Services (16) → SQLite
-                                    ↓
-                    External APIs (SMHI · EU Agri-Food · FAOSTAT · Eurostat)
+Farmer/Analyst/Bank → Streamlit UI → Embedded ML (RF×3 via joblib) → SQLite farmers
+                                      ↓
+                              session_state (pipeline overrides, farmer profiles)
 ```
 
-- **3 routers:** farmers, analysis, ML ops (34 endpoints)
-- **16 services:** financial analysis, ML (RF × 3), scenarios, liquidity, peer benchmarking, SHAP, Gemini memos, evaluation, preprocessing, environmental scoring
-- **9 SQLAlchemy models:** farmer, loan, financial, operational, prediction, scenario, memo, document, external
+- **8-tab timeline** (7 for analyst, 8 for bank) — single-page layout
+- **SQLite persistence** — custom farmers survive restarts
+- **session_state** — status overrides + farmer profiles survive Streamlit reruns
 
 ---
 
 ## ML Approach
 
-**Random Forest × 3** — credit risk classifier, repayment regressor, debt capacity regressor.
+**Random Forest × 3** — embedded via `agrisense_model_bundle.pkl` (9.7 MB joblib).
 
 | Principle | Implementation |
 |-----------|---------------|
-| Explainability over complexity | SHAP per-prediction + deterministic financial ratios |
-| Honest evaluation | 1,000 unseen farmers, 5 stress scenarios, frozen model |
+| Deterministic + ML | 10 financial ratios computed from formulas, ML for risk estimation |
+| Honest evaluation | 1,000 unseen farmers, 5 stress scenarios |
 | Human-in-the-loop | AI prepares evidence — humans decide |
 
 **Evaluation (1,000 unseen farmers, shifted distributions):**
@@ -56,27 +60,18 @@ Users → Streamlit → FastAPI → Routers (3) → Services (16) → SQLite
 | F1 | 82.8% |
 | ROC-AUC | 90.0% |
 
-**5 stress scenarios (500 farmers each):**
-
-| Scenario | Risk Shift |
-|----------|-----------|
-| Drought Shock | +194 high-risk (+23.5%) |
-| Combined Crisis | +117 high-risk (+16.3%) |
-| Recovery Boom | -85 high-risk (-7.1%) |
-
-Drought Index is the #1 feature at 28.6% importance — weather dominates financial ratios.
-
 ---
 
 ## Tech Stack
 
 | Layer | Tech |
 |-------|------|
-| Frontend | Streamlit |
-| Backend | FastAPI + SQLAlchemy + SQLite |
+| Frontend | Streamlit 1.36 |
 | ML | scikit-learn Random Forest × 3 |
-| Explainability | SHAP + Gemini AI |
-| Deployment | Docker · HuggingFace Spaces · GitHub |
+| Storage | SQLite (built-in) |
+| State | st.session_state overrides |
+| Deployment | HuggingFace Spaces · GitHub |
+| Backend (future) | FastAPI + SHAP + Gemini |
 
 ---
 
@@ -86,7 +81,29 @@ Drought Index is the #1 feature at 28.6% importance — weather dominates financ
 git clone https://github.com/Uday-Kiran-01/AgriSense.git
 cd Agri-Sense
 pip install -r requirements.txt
-cd backend && uvicorn app.main:app --reload
+streamlit run app.py
+```
+
+---
+
+## Docs
+
+- [Technical Write-up](docs/technical-writeup.md) — 12-section engineering document
+- [Architecture Overview](docs/architecture.md) — Mermaid diagrams
+
+| Scenario | Risk Shift |
+| Deployment | HuggingFace Spaces · GitHub |
+| Backend (future) | FastAPI + SHAP + Gemini |
+
+---
+
+## Quick Start
+
+```bash
+git clone https://github.com/Uday-Kiran-01/AgriSense.git
+cd Agri-Sense
+pip install -r requirements.txt
+streamlit run app.py
 ```
 
 ---
