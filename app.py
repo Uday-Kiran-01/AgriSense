@@ -1190,6 +1190,7 @@ def analyst_view():
 def analyst_pipeline():
     st.markdown("## Applications")
     st.caption("Click a status to filter - then open an application to begin review.")
+    st.markdown('<div class="info" style="margin-bottom:1rem;font-size:0.75rem;">🔬 <strong>Demo Mode:</strong> In production, analysts see only their assigned portfolio. All 8 farmers are shown here for demonstration of the full assessment workflow.</div>',unsafe_allow_html=True)
 
     ready = sum(1 for p in PIPELINE if p["status"]=="Ready")
     pending = sum(1 for p in PIPELINE if "Pending" in p["status"])
@@ -1272,6 +1273,7 @@ def bank_view():
 def bank_pipeline():
     st.markdown("## Applications")
     st.caption("Click a status to filter the list below.")
+    st.markdown('<div class="info" style="margin-bottom:1rem;font-size:0.75rem;">🔬 <strong>Demo Mode:</strong> In production, bank officers review only applications escalated to them. All 8 farmers are visible here for demonstration of the decision workflow.</div>',unsafe_allow_html=True)
 
     total = len(PIPELINE)
     ready = sum(1 for p in PIPELINE if p["status"]=="Ready")
