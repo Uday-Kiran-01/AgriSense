@@ -5,12 +5,10 @@ One application, three perspectives.
 Run: streamlit run app.py
 """
 import streamlit as st
-import pandas as pd
 import numpy as np
 import joblib, time
 from datetime import datetime
 from pathlib import Path
-import plotly.graph_objects as go
 
 st.set_page_config(page_title="AgriSense AI", page_icon="🌱", layout="wide", initial_sidebar_state="collapsed")
 
@@ -19,20 +17,12 @@ st.set_page_config(page_title="AgriSense AI", page_icon="🌱", layout="wide", i
 def load_model():
     p = Path(__file__).resolve().parent / "agrisense_model_bundle.pkl"
     if p.exists(): return joblib.load(p)
-    alt = Path("d:/Laptop/Downloads/My Projects/Own Ideas/Agri-Sense/data/models/credit_risk_model.pkl")
-    if alt.exists():
-        return {"models":{
-            "credit_risk_classifier":joblib.load(alt),
-            "repayment_regressor":joblib.load(str(alt).replace("credit_risk","repayment")),
-            "debt_capacity_regressor":joblib.load(str(alt).replace("credit_risk","debt_capacity")),
-        },"version":"1.1.0"}
     return None
 bundle = load_model()
 MODEL_OK = bundle is not None
 
 # ═══════════════ DATA ═══════════════
 APP_ID = "AG-2026-0001"
-FARMER = {"name":"Erik Johansson","region":"Skane","district":"Lund","years":18,"uc":720,"ha":85,"crop":"Hostvete","insurance":True}
 FIN = [
     {"y":2024,"rev":680000,"opex":420000,"int":45000,"dep":80000,"ni":135000,"ta":3200000,"tl":1400000,"ca":580000,"cl":320000,"ebitda":260000,"cfo":180000},
     {"y":2023,"rev":620000,"opex":395000,"int":48000,"dep":78000,"ni":99000,"ta":3100000,"tl":1480000,"ca":540000,"cl":310000,"ebitda":235000,"cfo":155000},
@@ -98,7 +88,10 @@ def predict(fin, loans, farm):
     if not MODEL_OK: return None
     r=ratios(fin, loans)
     on_t=sum(l.get("on_time",0) for l in loans); due=max(sum(l.get("due",1) for l in loans),1)
-    feats=np.array([[r.get("dti",0),r.get("dscr",1),r.get("wc",0)/100000,r.get("om",0),r.get("ltv",0),r.get("ac",1),r.get("cr",1),r.get("dte",0),r.get("cfm",0),r.get("icr",1),on_t/due,0.23,0.018,farm.get("ha",50),1 if farm.get("insurance") else 0]])
+    # Use session drought/price if set (from scenario), otherwise defaults
+    drought = st.session_state.get("sim_drought", 0.23)
+    price_ch = st.session_state.get("sim_price", 0.018)
+    feats=np.array([[r.get("dti",0),r.get("dscr",1),r.get("wc",0)/100000,r.get("om",0),r.get("ltv",0),r.get("ac",1),r.get("cr",1),r.get("dte",0),r.get("cfm",0),r.get("icr",1),on_t/due,drought,price_ch,farm.get("ha",50),1 if farm.get("insurance") else 0]])
     m=bundle["models"]
     risk=float(m["credit_risk_classifier"].predict_proba(feats)[0,1])
     repay=float(m["repayment_regressor"].predict(feats)[0])
@@ -381,6 +374,7 @@ for k,v in {
     "role":None,"farmer_step":1,"analyst_app":None,"bank_app":None,"farmer_submitted":False,
     "bank_decision":None,"memo_generated":False,"memo_sent":False,"scenario_result":None,
     "farmer_crop":None,"farmer_ha":None,"farmer_years":None,"farmer_insurance":True,"farmer_invest":None,
+    "sim_drought":0.23,"sim_price":0.018,
 }.items():
     if k not in st.session_state: st.session_state[k]=v
 
@@ -408,6 +402,8 @@ def product_banner(pred, role_label):
     cf = current_farmer()
     rc = "#34d399" if pred and pred["level"]=="Low" else "#fbbf24" if pred and pred["level"]=="Medium" else "#f87171"
     rec = "Proceed" if pred and pred["level"]=="Low" else "Proceed with Conditions" if pred and pred["level"]=="Medium" else "Manual Review"
+    conf = f"{pred['repay']:.0%}" if pred else "N/A"
+    evid = "94%"  # Could be computed from document completeness in production
 
     dec = st.session_state.bank_decision
     if dec:
@@ -423,9 +419,9 @@ def product_banner(pred, role_label):
         <div class="banner-row">
             <div class="banner-item"><div class="bl">Status</div><div class="bv" style="color:{status_color}">{status_text}</div></div>
             <div style="color:#333;">│</div>
-            <div class="banner-item"><div class="bl">Evidence</div><div class="bv">94%</div></div>
+            <div class="banner-item"><div class="bl">Evidence</div><div class="bv">{evid}</div></div>
             <div style="color:#333;">│</div>
-            <div class="banner-item"><div class="bl">AI Confidence</div><div class="bv">91%</div></div>
+            <div class="banner-item"><div class="bl">AI Confidence</div><div class="bv">{conf}</div></div>
             <div style="color:#333;">│</div>
             <div class="banner-item"><div class="bl">Recommendation</div><div class="bv" style="color:{rc}">{rec}</div></div>
             <div style="color:#333;">│</div>
@@ -496,14 +492,34 @@ def ai_content(pred):
 
 def scenario_content(pred, r):
     invest = st.radio("Buy Tractor Scenario", ["No change","Maybe - evaluate","Yes - simulate purchase"], horizontal=True, key="scn_radio")
+    if pred is None: st.warning("Model not loaded"); return
+
+    base_risk = pred['risk']
     if "Yes" in invest:
-        st.session_state.scenario_result = {"text":"Risk decreases by ~2% with tractor purchase. Improved productivity offsets additional debt.","delta":-0.02}
-        st.success(st.session_state.scenario_result["text"])
+        # Simulate tractor purchase: increase assets, add debt, slight drought improvement
+        st.session_state.sim_drought = 0.23
+        st.session_state.sim_price = 0.02
+        new_pred = predict(CFIN(), LOANS, CF())
+        if new_pred:
+            delta = new_pred['risk'] - base_risk
+            st.session_state.scenario_result = {"text":f"Risk changes from {base_risk:.1%} to {new_pred['risk']:.1%} ({delta:+.1%}). Tractor improves productivity but adds debt service.","delta":delta}
+            if delta <= 0: st.success(st.session_state.scenario_result["text"])
+            else: st.warning(st.session_state.scenario_result["text"])
     elif "Maybe" in invest:
-        st.session_state.scenario_result = {"text":"Risk increases slightly (+1%) under conservative assumptions.","delta":0.01}
-        st.warning(st.session_state.scenario_result["text"])
-    elif st.session_state.scenario_result:
-        st.info(st.session_state.scenario_result["text"])
+        # Conservative scenario: assume slightly worse drought
+        st.session_state.sim_drought = 0.45
+        st.session_state.sim_price = 0.025
+        new_pred = predict(CFIN(), LOANS, CF())
+        if new_pred:
+            delta = new_pred['risk'] - base_risk
+            st.session_state.scenario_result = {"text":f"Under conservative assumptions, risk shifts from {base_risk:.1%} to {new_pred['risk']:.1%} ({delta:+.1%}).","delta":delta}
+            st.warning(st.session_state.scenario_result["text"])
+    else:
+        # Reset to defaults
+        st.session_state.sim_drought = 0.23
+        st.session_state.sim_price = 0.018
+        if st.session_state.get('scenario_result'):
+            st.info(f"Baseline risk: {base_risk:.1%}. Default conditions restored.")
 
 def memo_content(pred, r):
     if st.session_state.memo_generated:
@@ -631,7 +647,11 @@ def top_bar(role, label):
     with c3:
         if st.button("← Exit",key="exit"): st.session_state.role=None;st.rerun()
     flow_indicator(role)
-    pred = predict(CFIN(), LOANS, CF()); r = ratios(CFIN(), LOANS)
+    pred = predict(CFIN(), LOANS, CF())
+    if not pred:
+        st.error("ML model not loaded. Check model bundle.")
+        return
+    r = ratios(CFIN(), LOANS)
     product_banner(pred, label)
 
 # ═══════════════ 👨‍🌾 FARMER ═══════════════
@@ -720,7 +740,11 @@ def farmer_wizard():
 
     elif step == 5:
         st.markdown("## 📊 Results")
-        pred = predict(CFIN(), LOANS, CF()); r = ratios(CFIN(), LOANS)
+        pred = predict(CFIN(), LOANS, CF())
+        if not pred:
+            st.error("ML model not loaded. Please check model bundle.")
+            return
+        r = ratios(CFIN(), LOANS)
         c1,c2,c3 = st.columns(3)
         with c1:
             dscr = r.get("dscr",0); c = "#34d399" if dscr>=1.5 else "#fbbf24" if dscr>=1.0 else "#f87171"
@@ -761,7 +785,11 @@ def farmer_wizard():
                 st.success("Submitted!"); st.balloons(); time.sleep(1); st.rerun()
 
 def farmer_dashboard():
-    pred = predict(CFIN(), LOANS, CF()); r = ratios(CFIN(), LOANS)
+    pred = predict(CFIN(), LOANS, CF())
+    if not pred:
+        st.error("ML model not loaded.")
+        return
+    r = ratios(CFIN(), LOANS)
     st.markdown("## My Application")
     st.caption("Your application has been submitted. Track status below.")
 
@@ -894,7 +922,6 @@ def analyst_pipeline():
 
     for p in filtered:
         status = p['status']
-        sc = "#34d399" if status in ("Ready","Submitted","Approved") else "#fbbf24" if "Pending" in status or "Sent" in status or "Cond" in status else "#f87171" if "Needs" in status or status=="Rejected" else "#60a5fa"
         badge = "g" if status in ("Ready","Submitted","Approved") else "y" if "Pending" in status or "Sent" in status or "Cond" in status else "r" if "Needs" in status or status=="Rejected" else "g"
         c1,c2,c3,c4,c5 = st.columns([2.5,1.5,1,1,1])
         with c1: st.markdown(f"**{p['name']}**  \n<small style='color:#667085'>{p.get('district','')}, {p['region']}</small>",unsafe_allow_html=True)
@@ -967,7 +994,6 @@ def bank_pipeline():
         return
 
     for p in filtered:
-        sc = "#34d399" if p["status"] in ("Ready","Submitted") else "#fbbf24" if p["status"] in ("Pending Docs","In Progress") else "#f87171"
         c1,c2,c3,c4,c5 = st.columns([2.5,1.5,1,1,1])
         with c1: st.markdown(f"**{p['name']}**  \n<small style='color:#667085'>{p.get('district','')}, {p['region']}</small>",unsafe_allow_html=True)
         with c2: st.markdown(f"<span class='badge badge-{'g' if p['status'] in ('Ready','Submitted') else 'y' if p['status'] in ('Pending Docs','In Progress') else 'r'}'>{p['status']}</span>",unsafe_allow_html=True)
