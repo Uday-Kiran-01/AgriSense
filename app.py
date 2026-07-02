@@ -463,7 +463,7 @@ def timeline(pred, r, expanded_sections):
         (3, "Financial Analysis", "financials", "✅ Complete", True,
          lambda: financial_content(r, pred)),
         (4, "External Intelligence", "external", "✅ Live", True,
-         lambda: external_content()),
+         lambda: external_content(r, pred)),
         (5, "AI Assessment", "ai", "✅ Complete", True,
          lambda: ai_content(pred)),
         (6, "Scenario Simulation", "scenario", "⚡ Run", False,
@@ -528,7 +528,7 @@ def financial_content(r, pred):
         cfm = r.get("cfm",0); dc8 = "#34d399" if cfm>=0.15 else "#fbbf24" if cfm>=0.05 else "#f87171"
         st.markdown(f'<div class="card-sm"><span style="color:{dc8};font-size:1.2rem;font-weight:700;">{cfm:.1%}</span><br><small style="color:#667085;">Cash Flow Margin</small></div>',unsafe_allow_html=True)
 
-def external_content():
+def external_content(r=None, pred=None):
     cf = CF()
     region = cf.get('region','Skane')
     score = cf.get('score',87)
@@ -544,9 +544,9 @@ def external_content():
     cap = int(ha * 1350)
     st.markdown(f"{w_emoji} Weather: {weather} ({region})  ·  📉 Wheat: {base_price:.2f} kr/kg ({price_change:+.1f}%)  ·  🦠 Disease Risk: {'Low' if score>=70 else 'Moderate' if score>=50 else 'Elevated'}  ·  💶 EU CAP: {cap:,} kr")
     c1,c2,c3,c4 = st.columns(4)
-    with c1: st.metric("DSCR", f"{r.get('dscr',0):.2f}x")
-    with c2: st.metric("Debt-to-Income", f"{r.get('dti',0):.1%}")
-    with c3: st.metric("Operating Margin", f"{r.get('om',0):.1%}")
+    with c1: st.metric("DSCR", f"{r.get('dscr',0):.2f}x" if r else "N/A")
+    with c2: st.metric("Debt-to-Income", f"{r.get('dti',0):.1%}" if r else "N/A")
+    with c3: st.metric("Operating Margin", f"{r.get('om',0):.1%}" if r else "N/A")
     with c4: st.metric("Debt Capacity", f"{pred['cap']/1000:.0f}K kr" if pred else "N/A")
     # Seasonal Cash Flow - scales with actual revenue
     cf = CF()
@@ -748,11 +748,14 @@ def top_bar(role, label):
     with c3:
         if st.button("← Exit",key="exit"): st.session_state.role=None;st.rerun()
     flow_indicator(role)
+    # Only show product banner if farmer (always has an app) or analyst/bank with a selected app
+    has_app = (role == "farmer") or (role == "analyst" and st.session_state.analyst_app) or (role == "bank" and st.session_state.bank_app)
+    if not has_app:
+        return
     pred = predict(CFIN(), LOANS, CF())
     if not pred:
         st.error("ML model not loaded. Check model bundle.")
         return
-    r = ratios(CFIN(), LOANS)
     product_banner(pred, label)
 
 # ═══════════════ 👨‍🌾 FARMER ═══════════════
