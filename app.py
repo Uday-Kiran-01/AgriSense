@@ -1139,15 +1139,26 @@ def farmer_dashboard():
     if dec:
         color = "#34d399" if dec["decision"]=="Approve" else "#fbbf24" if "Conditions" in dec["decision"] else "#f87171"
         emoji = "✅" if dec["decision"]=="Approve" else "⚠️" if "Conditions" in dec["decision"] else "❌"
-        badge_class = "badge badge-g" if dec["decision"]=="Approve" else "badge badge-y" if "Conditions" in dec["decision"] else "badge badge-r"
-        st.markdown(f'<span class="{badge_class}" style="font-size:0.8rem;">{emoji} {dec["decision"].upper()}</span>',unsafe_allow_html=True)
         st.markdown(f"""
-        <div class="card" style="margin-top:1rem;border-left:4px solid {color};">
-            <div style="font-size:1.1rem;font-weight:700;color:{color};">Bank Decision: {dec['decision']}</div>
-            <div style="color:#94a3b8;font-size:0.85rem;margin-top:0.3rem;">{dec['notes']}</div>
-            <div style="color:#667085;font-size:0.65rem;margin-top:0.5rem;">Recorded: {dec['timestamp']}</div>
+        <div class="card" style="text-align:center;border:2px solid {color};padding:2rem;">
+            <div style="font-size:3rem;">{emoji}</div>
+            <div style="font-size:1.5rem;font-weight:800;color:{color};margin:0.5rem 0;">{dec['decision'].upper()}</div>
+            <div style="color:#94a3b8;font-size:0.9rem;margin:0.5rem 0;">{dec['notes']}</div>
+            <div style="color:#667085;font-size:0.7rem;margin-top:0.5rem;">Recorded: {dec['timestamp']}</div>
         </div>
         """,unsafe_allow_html=True)
+        st.divider()
+        st.info("This application is complete. Start a new one below.")
+        if st.button("🔄 Start New Application", use_container_width=True, type="primary"):
+            for k in ['farmer_submitted','farmer_step','memo_generated','memo_sent',
+                       'bank_decision','scenario_result','farmer_crop','farmer_ha',
+                       'farmer_years','farmer_insurance','farmer_invest','farmer_machinery',
+                       'farmer_profiles','farmer_user']:
+                if k in st.session_state: del st.session_state[k]
+            reset_pipeline()
+            st.rerun()
+        return
+
     elif memo_sent:
         st.markdown('<span class="badge badge-y" style="font-size:0.8rem;">📤 Sent to Bank</span>',unsafe_allow_html=True)
         st.caption("Your application is with the bank officer for final decision.")
@@ -1217,11 +1228,8 @@ def farmer_dashboard():
         st.info("Your profile is solid without additional debt.")
 
     st.divider()
-    # Only show this if no decision yet
     if not st.session_state.bank_decision:
         st.info("📤 Your application is being processed. You'll be notified when the bank reviews it.")
-    else:
-        st.success("Decision received! View the details above.")
     st.caption("")
     if st.button("🔄 Start New Application", use_container_width=True):
         for k in ['farmer_submitted','farmer_step','memo_generated','memo_sent',
