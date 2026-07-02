@@ -1014,7 +1014,7 @@ def farmer_wizard():
     elif step == 2:
         st.markdown("## 📄 Documents")
         st.caption("We need these to assess your application.")
-        st.checkbox("Use demo documents (Erik Johansson)",True,disabled=True)
+        st.checkbox(f"Use demo documents ({cf['name']})",True,disabled=True)
         # Vary docs based on farmer score
         cf = current_farmer()
         score = cf.get("score", 87)
