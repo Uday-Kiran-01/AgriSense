@@ -785,13 +785,16 @@ def farmer_wizard():
         st.markdown("## 🌾 Farm Details")
         c1,c2 = st.columns(2)
         with c1:
-            crop = st.selectbox("Primary Crop",["Hostvete","Varvete","Varkorn","Havre","Hostraps"],index=0)
-            ha = st.number_input("Farm Size (ha)",10,500,85)
-            yrs = st.number_input("Years Farming",1,50,18)
+            crop = st.selectbox("Primary Crop",["Hostvete","Varvete","Varkorn","Havre","Hostraps"],
+                               index=(["Hostvete","Varvete","Varkorn","Havre","Hostraps"].index(st.session_state.get('farmer_crop','Hostvete')) if st.session_state.get('farmer_crop') in ["Hostvete","Varvete","Varkorn","Havre","Hostraps"] else 0))
+            ha = st.number_input("Farm Size (ha)",10,500,st.session_state.get('farmer_ha',85))
+            yrs = st.number_input("Years Farming",1,50,st.session_state.get('farmer_years',18))
         with c2:
-            ins = st.checkbox("Crop Insurance",True)
-            machinery = st.multiselect("Machinery",["Tractor","Harvester","Plow","Seeder","Sprayer"],["Tractor","Harvester","Plow"])
-            invest = st.selectbox("Planning to invest in?",["Tractor","Harvester","Irrigation","Storage","No plans"],index=0)
+            ins = st.checkbox("Crop Insurance",st.session_state.get('farmer_insurance',True))
+            machinery = st.multiselect("Machinery",["Tractor","Harvester","Plow","Seeder","Sprayer"],
+                                       st.session_state.get('farmer_machinery',["Tractor","Harvester","Plow"]))
+            invest = st.selectbox("Planning to invest in?",["Tractor","Harvester","Irrigation","Storage","No plans"],
+                                 index=(["Tractor","Harvester","Irrigation","Storage","No plans"].index(st.session_state.get('farmer_invest','Tractor')) if st.session_state.get('farmer_invest') in ["Tractor","Harvester","Irrigation","Storage","No plans"] else 0))
         st.divider()
         c1,c2 = st.columns(2)
         with c1:
@@ -960,12 +963,10 @@ def farmer_dashboard():
         st.success("Decision received! View the details above.")
     st.caption("")
     if st.button("🔄 Start New Application", use_container_width=True):
-        st.session_state.farmer_submitted = False
-        st.session_state.farmer_step = 1
-        st.session_state.memo_generated = False
-        st.session_state.memo_sent = False
-        st.session_state.bank_decision = None
-        st.session_state.scenario_result = None
+        for k in ['farmer_submitted','farmer_step','memo_generated','memo_sent',
+                   'bank_decision','scenario_result','farmer_crop','farmer_ha',
+                   'farmer_years','farmer_insurance','farmer_invest','farmer_machinery']:
+            if k in st.session_state: del st.session_state[k]
         st.rerun()
 
 # ═══════════════ 🏢 CREDIT ANALYST ═══════════════
