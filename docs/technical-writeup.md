@@ -282,7 +282,93 @@ graph TB
 
 ---
 
-## 10. Lessons Learned
+## 10. Demo Application Implementation
+
+### 10.1 Three-Role Workflow
+
+The app implements the complete lending lifecycle across three perspectives sharing a single application:
+
+| Role | Sees | Key Actions |
+|------|------|-------------|
+| Farmer | Only their own data | 5-step wizard → Submit |
+| Credit Analyst | All submitted applications | Review ratios → Run scenarios → Generate memo → Send to bank |
+| Bank Officer | Applications escalated to them | Review full package → Approve/Conditions/Reject |
+
+In production, these would be three separate deployments with authentication. In the demo, a simple role selector on the landing page simulates the three perspectives.
+
+### 10.2 Farmer Wizard (5 Steps)
+
+1. **Welcome** — Shows farm size, experience, region, machinery, investment plans
+2. **Documents** — Score-based document readiness check (score ≥ 80: all docs present; score < 60: 2 missing). Missing documents block progression.
+3. **Farm Details** — Crop type (5 options), hectares, years farming, crop insurance, machinery, investment plans. All values remembered on Edit.
+4. **Analysis** — Animated progress through 5 stages (checking docs → extracting financials → weather → ML → report)
+5. **Results** — DSCR/DTI-based cards, improvement suggestions, Submit button
+
+### 10.3 Session State Architecture
+
+Streamlit re-executes the entire script on every interaction. Five session_state mechanisms handle this:
+
+| Mechanism | Keys | Purpose |
+|-----------|------|---------|
+| `pipeline_overrides` | `{farmer_name: status}` | Pipeline status survives reruns — Submitted, Sent to Bank, Approved |
+| `farmer_profiles` | `{farmer_name: {crop, ha, years, insurance}}` | Farmer form inputs visible to analyst and bank |
+| `farmer_user` | string | Current logged-in farmer (set on registration or landing page) |
+| Role + app selectors | `role`, `analyst_app`, `bank_app` | Which view and which farmer is active |
+| Workflow flags | `memo_generated`, `memo_sent`, `bank_decision` | Progress through the review pipeline |
+
+Key functions:
+- `get_pipeline()` — merges `pipeline_overrides` into the base PIPELINE list
+- `save_farmer_profile()` — persists farmer form inputs for cross-role visibility
+- `current_farmer()` — returns the active farmer with profiles applied regardless of role
+- `reset_pipeline()` — clears all overrides on "Start New Application"
+
+### 10.4 Tab-Based Timeline
+
+The analyst and bank workspaces present 8 assessment steps as tabs:
+
+1. **📄 Docs** — Document list with reliability score
+2. **🔍 Validation** — Currency, area, format validation summary
+3. **📊 Financials** — All 10 ratios color-coded (green/yellow/red) in a single row
+4. **🌍 External** — Weather, commodity prices, EU CAP subsidy, seasonal cash flow chart
+5. **🤖 AI** — Risk %, repayment probability, risk level from Random Forest
+6. **🎯 Scenario** — "Buy Tractor" simulation: re-runs predict() with modified drought/price
+7. **📋 Memo** — Generated credit assessment with all computed figures; Send to Bank action
+8. **⚖️ Decision** — Approve / Approve with Conditions / Reject with required notes
+
+This replaced the earlier vertical expand/collapse design to fit all content on a single page without scrolling.
+
+### 10.5 SQLite Farmer Persistence
+
+Custom farmers are stored in `agrisense_farmers.db` (auto-created on first run):
+
+- Register via "🌱 Register New Farmer" on the landing page
+- Fields: name, region, district, crop, hectares, years, insurance, UC score, evidence score, DSCR, pipeline status
+- Custom farmers appear at the top of the analyst/bank pipeline
+- Registration auto-switches to Farmer View with the new farmer's data
+- Remove button deletes from database
+- Survives server restarts (SQLite on disk)
+
+### 10.6 Product Banner
+
+The persistent product banner shows the current farmer's ID, location, farm details, and dynamically computed status. Status transitions through the workflow:
+
+```
+READY FOR ASSESSMENT → SUBMITTED → UNDER REVIEW → SENT TO BANK → DECIDED
+```
+
+Status is determined by checking session_state in priority order: `bank_decision → memo_sent → memo_generated → pipeline_overrides → PIPELINE default`.
+
+### 10.7 Scenario Simulation
+
+Both the farmer dashboard and the analyst timeline include scenario simulation:
+
+- **Farmer:** "Planning to invest in a tractor?" radio with three options, each modifying `sim_drought` and `sim_price` in session_state, then re-running `predict()` to show risk impact
+- **Analyst:** Same mechanism in the Scenario tab, showing risk delta with the baseline
+- Uses the same `predict()` function — real ML re-prediction, not template text
+
+---
+
+## 11. Lessons Learned
 
 ### What Worked
 
