@@ -29,8 +29,8 @@ FIN = [
     {"y":2022,"rev":590000,"opex":380000,"int":50000,"dep":75000,"ni":85000,"ta":2950000,"tl":1550000,"ca":500000,"cl":300000,"ebitda":220000,"cfo":140000},
 ]
 LOANS = [
-    {"lender":"Landshypotek","amt":500000,"out":320000,"rate":4.5,"emi":8500,"tenure":120,"on_time":42,"due":48},
-    {"lender":"Swedbank","amt":200000,"out":85000,"rate":5.2,"emi":4200,"tenure":60,"on_time":28,"due":30},
+    {"lender":"Landshypotek","amt":500000,"out":200000,"rate":4.5,"emi":8500,"tenure":120,"on_time":42,"due":48},
+    {"lender":"Swedbank","amt":200000,"out":50000,"rate":5.2,"emi":4200,"tenure":60,"on_time":28,"due":30},
 ]
 PIPELINE = [
     {"id":"AG-2026-0001","name":"Erik Johansson","region":"Skane","district":"Lund","status":"Ready","score":87,"dscr":1.32,"ha":85,"crop":"Hostvete","years":18,"uc":720},
@@ -69,21 +69,22 @@ def current_financials():
     ha_scale = cf.get("ha", 85) / 85
     # Adjust for farmer's actual DSCR vs Erik's baseline (1.32)
     target_dscr = cf.get("dscr", 1.32)
-    dscr_ratio = 1.32 / max(target_dscr, 0.3)  # >1 means riskier, <1 means safer
+    dscr_ratio = 1.32 / max(target_dscr, 0.3)
+    dscr_ratio = max(0.4, min(2.5, dscr_ratio))  # Cap to prevent extreme values
     result = []
     for f in FIN:
         adj = dict(f)
         adj["rev"] = int(f["rev"] * ha_scale)
-        adj["opex"] = int(f["opex"] * ha_scale * (1 + (dscr_ratio - 1) * 0.6))
-        adj["int"] = int(f["int"] * ha_scale * dscr_ratio)
+        adj["opex"] = int(f["opex"] * ha_scale * (1 + (dscr_ratio - 1) * 0.3))
+        adj["int"] = int(f["int"] * ha_scale * (1 + (dscr_ratio - 1) * 0.5))
         adj["dep"] = int(f["dep"] * ha_scale)
         adj["ni"] = adj["rev"] - adj["opex"] - adj["int"] - adj["dep"]
         adj["ta"] = int(f["ta"] * ha_scale)
-        adj["tl"] = int(f["tl"] * ha_scale * dscr_ratio)
+        adj["tl"] = int(f["tl"] * ha_scale * (1 + (dscr_ratio - 1) * 0.3))
         adj["ca"] = int(f["ca"] * ha_scale)
         adj["cl"] = int(f["cl"] * ha_scale)
         adj["ebitda"] = adj["ni"] + adj["int"] + adj["dep"]
-        adj["cfo"] = int(adj["ebitda"] * 0.7)
+        adj["cfo"] = int(max(0, adj["ebitda"] * 0.7))
         result.append(adj)
     return result
 
