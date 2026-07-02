@@ -577,23 +577,21 @@ def product_banner(pred, role_label):
 # ═══════════════ TIMELINE ═══════════════
 def timeline(pred, r, expanded_sections):
     """Render the 8-step application journey as tabs - everything on one page."""
-    import collections
-    # Determine default active tab
-    active_tab = None
-    for section in expanded_sections:
-        active_tab = section
-        break
-    if not active_tab:
-        active_tab = "financials"
-
     # Status badges
     memo_status = "📤 Sent" if st.session_state.memo_sent else ("✅ Done" if st.session_state.memo_generated else "📝 Ready")
     dec_status = f"✅ {st.session_state.bank_decision['decision']}" if st.session_state.bank_decision else "⏳ Pending"
 
-    tabs = st.tabs([
+    # Build tab list - Decision tab only for bank officer
+    tab_labels = [
         "📄 Docs", "🔍 Validation", "📊 Financials", "🌍 External",
-        "🤖 AI", "🎯 Scenario", f"📋 Memo ({memo_status})", f"⚖️ Decision ({dec_status})"
-    ])
+        "🤖 AI", "🎯 Scenario", f"📋 Memo ({memo_status})"
+    ]
+    tab_keys = ["docs","validation","financials","external","ai","scenario","memo"]
+    if "decision" in expanded_sections:
+        tab_labels.append(f"⚖️ Decision ({dec_status})")
+        tab_keys.append("decision")
+
+    tabs = st.tabs(tab_labels)
 
     with tabs[0]:
         st.caption(f"Reliability: **{CF().get('score',87)}%**")
@@ -610,8 +608,9 @@ def timeline(pred, r, expanded_sections):
         scenario_content(pred, r)
     with tabs[6]:
         memo_content(pred, r)
-    with tabs[7]:
-        decision_content()
+    if "decision" in tab_keys:
+        with tabs[7]:
+            decision_content()
 
 def financial_content(r, pred):
     """Show financial ratios compactly."""
