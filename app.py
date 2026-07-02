@@ -33,14 +33,14 @@ LOANS = [
     {"lender":"Swedbank","amt":200000,"out":50000,"rate":5.2,"emi":4200,"tenure":60,"on_time":28,"due":30},
 ]
 PIPELINE = [
-    {"id":"AG-2026-0001","name":"Erik Johansson","region":"Skane","district":"Lund","status":"Ready","score":87,"dscr":1.32,"ha":85,"crop":"Hostvete","years":18,"uc":720},
-    {"id":"AG-2026-0002","name":"Anna Nilsson","region":"Ostergotland","district":"Linkoping","status":"Ready","score":82,"dscr":1.45,"ha":120,"crop":"Varvete","years":22,"uc":780},
-    {"id":"AG-2026-0003","name":"Lars Persson","region":"Vastra Gotaland","district":"Skovde","status":"Pending Docs","score":65,"dscr":0.95,"ha":65,"crop":"Havre","years":8,"uc":610},
-    {"id":"AG-2026-0004","name":"Maria Andersson","region":"Halland","district":"Falkenberg","status":"Needs Review","score":58,"dscr":0.78,"ha":45,"crop":"Varkorn","years":5,"uc":550},
-    {"id":"AG-2026-0005","name":"Johan Karlsson","region":"Skane","district":"Ystad","status":"Ready","score":91,"dscr":1.85,"ha":150,"crop":"Hostvete","years":25,"uc":820},
-    {"id":"AG-2026-0006","name":"Karin Svensson","region":"Uppsala","district":"Enkoping","status":"Submitted","score":88,"dscr":1.52,"ha":95,"crop":"Hostraps","years":15,"uc":740},
-    {"id":"AG-2026-0007","name":"Peter Larsson","region":"Kalmar","district":"Vastervik","status":"Rejected","score":42,"dscr":0.55,"ha":30,"crop":"Havre","years":3,"uc":480},
-    {"id":"AG-2026-0008","name":"Sofia Berg","region":"Varmland","district":"Karlstad","status":"In Progress","score":72,"dscr":1.18,"ha":70,"crop":"Varkorn","years":12,"uc":690},
+    {"id":"AG-2026-0001","name":"Erik Johansson","region":"Skane","district":"Lund","status":"Ready","score":87,"dscr":1.32,"ha":85,"crop":"Hostvete","years":18,"uc":720,"insurance":True},
+    {"id":"AG-2026-0002","name":"Anna Nilsson","region":"Ostergotland","district":"Linkoping","status":"Ready","score":82,"dscr":1.45,"ha":120,"crop":"Varvete","years":22,"uc":780,"insurance":True},
+    {"id":"AG-2026-0003","name":"Lars Persson","region":"Vastra Gotaland","district":"Skovde","status":"Pending Docs","score":65,"dscr":0.95,"ha":65,"crop":"Havre","years":8,"uc":610,"insurance":True},
+    {"id":"AG-2026-0004","name":"Maria Andersson","region":"Halland","district":"Falkenberg","status":"Needs Review","score":58,"dscr":0.78,"ha":45,"crop":"Varkorn","years":5,"uc":550,"insurance":False},
+    {"id":"AG-2026-0005","name":"Johan Karlsson","region":"Skane","district":"Ystad","status":"Ready","score":91,"dscr":1.85,"ha":150,"crop":"Hostvete","years":25,"uc":820,"insurance":True},
+    {"id":"AG-2026-0006","name":"Karin Svensson","region":"Uppsala","district":"Enkoping","status":"Submitted","score":88,"dscr":1.52,"ha":95,"crop":"Hostraps","years":15,"uc":740,"insurance":True},
+    {"id":"AG-2026-0007","name":"Peter Larsson","region":"Kalmar","district":"Vastervik","status":"Rejected","score":42,"dscr":0.55,"ha":30,"crop":"Havre","years":3,"uc":480,"insurance":False},
+    {"id":"AG-2026-0008","name":"Sofia Berg","region":"Varmland","district":"Karlstad","status":"In Progress","score":72,"dscr":1.18,"ha":70,"crop":"Varkorn","years":12,"uc":690,"insurance":True},
 ]
 
 # Get current farmer data based on selected_app
