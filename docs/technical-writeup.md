@@ -5,7 +5,9 @@
 **Author:** Uday Kiran  
 **Date:** July 2026  
 **Repository:** [github.com/Uday-Kiran-01/AgriSense](https://github.com/Uday-Kiran-01/AgriSense)  
-**Live Demo:** [huggingface.co/spaces/SuperNitro/Agri-Sense](https://huggingface.co/spaces/SuperNitro/Agri-Sense)
+**Live Demo:** [huggingface.co/spaces/SuperNitro/Agri-Sense](https://huggingface.co/spaces/SuperNitro/Agri-Sense)  
+
+> **Note:** The HF Spaces demo is a **standalone Streamlit app** (`app.py`, ~1400 lines) with the ML model embedded directly via joblib. It has no backend dependency — all computation happens client-side. The Full-Stack Backend section below documents the optional production backend (FastAPI, SHAP, Gemini, external APIs) which is available in the `Agri-Sense/` directory but not required for the demo. The standalone app includes: 8-tab single-page UI, SQLite farmer persistence, session-state pipeline management, real-time ML predictions, scenario simulation, and memo generation — all from local data.
 
 ---
 
@@ -36,7 +38,7 @@ Every component is independently replaceable. Today the system uses mock bank AP
 
 ### Human-in-the-Loop
 
-The AI never approves loans. It prepares evidence: financial ratios, risk estimates, SHAP explanations, scenario impacts, and a plain-language decision memo. A human credit analyst reviews the package. A human bank officer makes the final decision. This is not a limitation-it is the design.
+The AI never approves loans. It prepares evidence: financial ratios, risk estimates, scenario impacts, and a structured decision memo. In the production backend, SHAP explanations and Gemini AI summaries provide additional explainability layers. A human credit analyst reviews the package. A human bank officer makes the final decision. This is not a limitation — it is the design.
 
 ### Data Quality Before Modelling
 
@@ -54,15 +56,15 @@ Raw Documents -> Validation -> Cleaning -> Standardization -> Conflict Detection
 
 ### Input Sources
 
-| Source | Type | Real or Mock |
-|--------|------|-------------|
-| Financial statements | 3 years of income, balance sheet, cash flow | Synthetic (GDPR-safe) |
-| Existing loans | Lender, amount, EMI, repayment history | Synthetic |
-| Operational data | Farm size, crop type, machinery, insurance | Synthetic |
-| SMHI | Weather observations (drought index, temperature) | Real API with verified stations |
-| EU Agri-Food | Commodity prices (wheat, barley, oats) | Real API with mock fallback |
-| FAOSTAT | Crop production, yield statistics | Real API with mock fallback |
-| Eurostat | Agricultural price indices | Real API with mock fallback |
+| Source | Type | Demo or Production |
+|--------|------|-------------------|
+| Financial statements | 3 years of income, balance sheet, cash flow | Demo: synthetic baseline scaled per farmer |
+| Existing loans | Lender, amount, EMI, repayment history | Demo: synthetic (Landshypotek + Swedbank) |
+| Operational data | Farm size, crop type, machinery, insurance | Demo: form input + SQLite persistence |
+| SMHI | Weather observations (drought index, temperature) | Production: real API. Demo: template-based |
+| EU Agri-Food | Commodity prices (wheat, barley, oats) | Production: real API. Demo: template-based |
+| FAOSTAT | Crop production, yield statistics | Production: real API. Not in demo |
+| Eurostat | Agricultural price indices | Production: real API. Not in demo |
 
 ### Preprocessing Decisions
 
@@ -249,17 +251,17 @@ graph TB
         Analyst["🏢 Analyst"] --> UI
         Bank["🏦 Bank Officer"] --> UI
     end
-    UI["🖥️ Streamlit<br/>HF Spaces"] --> API["⚙️ FastAPI<br/>:8000"]
-    API --> R["Routers<br/>farmers/analysis/ml"]
-    R --> S["Services<br/>16 modules"]
-    S --> DB[("SQLite<br/>WAL")]
-    S --> EXT["🌐 SMHI·EU·FAO·Eurostat"]
-    S --> ML["🌲 RF×3<br/>Risk+Repay+Capacity"]
-    ML --> SHAP["🔍 SHAP"]
-    SHAP --> Gemini["📝 Gemini Memo"]
+    UI["🖥️ Standalone Streamlit<br/>HF Spaces<br/>app.py ~1400 lines"] --> ML["🌲 RF x3<br/>joblib embedded"]
+    ML --> Ratios["📐 10 ratios<br/>Deterministic"]
+    UI --> SQLite[("💾 SQLite<br/>Custom farmers")]
+    UI --> State["🔄 session_state<br/>Pipeline overrides"]
+    
+    Backend["🔮 Production Backend (optional)"] -.-> ML
+    Backend -.-> SHAP["🔍 SHAP"]
+    SHAP -.-> Gemini["📝 Gemini Memo"]
 ```
 
-> **View live diagram:** [github.com/Uday-Kiran-01/AgriSense/blob/main/docs/architecture.md](https://github.com/Uday-Kiran-01/AgriSense/blob/main/docs/architecture.md)
+> **Live diagram:** [github.com/Uday-Kiran-01/AgriSense/blob/main/docs/architecture.md](https://github.com/Uday-Kiran-01/AgriSense/blob/main/docs/architecture.md)
 
 ---
 
@@ -267,16 +269,16 @@ graph TB
 
 | Decision | Rationale |
 |----------|-----------|
+| Standalone Streamlit | Single-file deployment to HF Spaces, no backend needed for demo |
 | Random Forest | Explainability + tabular data performance |
-| SQLite with WAL | Simple MVP, replaceable with PostgreSQL later |
-| FastAPI | API-first architecture, async support, OpenAPI docs |
+| SQLite (built-in) | Zero-config persistence for custom farmers, auto-creates on first run |
+| session_state overrides | Pipeline status + farmer profiles survive Streamlit reruns |
 | Streamlit | Rapid product prototyping, Python-native |
-| Docker | Reproducible deployment across environments |
-| Synthetic Data | GDPR-safe demonstration without real farmers |
-| SHAP | Per-prediction feature contributions |
-| Gemini AI | Natural-language explanations only-never financial calculations |
-| Three separate models | Independent retraining, versioning, and explanation |
 | Deterministic ratios + ML | Separation of auditable calculations from statistical inference |
+| Synthetic Data | GDPR-safe demonstration without real farmers |
+| Three separate models | Independent retraining, versioning, and explanation |
+| SHAP (backend only) | Per-prediction feature contributions — available in production backend |
+| Gemini AI (backend only) | Natural-language explanations — available in production backend |
 
 ---
 

@@ -1,11 +1,11 @@
 # AgriSense AI - Architecture Overview
 
-> View on [GitHub](https://github.com/Uday-Kiran-01/AgriSense/blob/main/docs/architecture.md) for live Mermaid diagrams.  
-> Export to PDF/PNG: copy any diagram block into [mermaid.live](https://mermaid.live)
+> View on [GitHub](https://github.com/Uday-Kiran-01/AgriSense) for live Mermaid diagrams.  
+> Export to PNG: copy any diagram into [mermaid.live](https://mermaid.live)
 
 ---
 
-## System Architecture
+## System Architecture (HF Spaces Deployment)
 
 ```mermaid
 graph TB
@@ -15,58 +15,37 @@ graph TB
         Bank["🏦 Bank Officer<br/>Final decision"]
     end
 
-    subgraph Frontend["🖥️ Streamlit Frontend"]
-        UI["Streamlit App<br/>Port 8501<br/>HF Spaces"]
+    subgraph Frontend["🖥️ Standalone Streamlit App"]
+        UI["app.py<br/>~1400 lines<br/>Single-file"]
+        CSS["Dark theme<br/>Responsive"]
+        Tabs["8-tab timeline<br/>Single-page layout"]
     end
 
-    subgraph Backend["⚙️ FastAPI Backend :8000"]
-        subgraph Routers["Routes (34 endpoints)"]
-            FR["farmers.py"]
-            AR["analysis.py"]
-            MR["ml.py"]
-        end
-
-        subgraph Services["Services (16)"]
-            FA["financial_analysis"]
-            ML["ml_service RFx3"]
-            SC["scenario_analysis"]
-            LQ["liquidity"]
-            PB["peer_benchmark"]
-            DR["decision_readiness"]
-            ED["external_data"]
-            SH["shap_explainer"]
-            GM["gemini_service"]
-            EV["evaluation"]
-            PP["preprocessing"]
-            ES["environmental_score"]
-        end
-
-        subgraph Data["Data Layer"]
-            DB[("SQLite WAL<br/>9 models")]
-            ORM["SQLAlchemy ORM"]
-        end
+    subgraph ML["🌲 Embedded ML"]
+        RF["Random Forest x3<br/>Credit Risk · Repayment · Debt Capacity"]
+        FE["15 engineered features<br/>10 financial ratios"]
     end
 
-    subgraph External["🌐 External APIs"]
-        SMHI["SMHI Weather"]
-        EU["EU Agri-Food"]
-        FAO["FAOSTAT"]
-        ESTAT["Eurostat"]
+    subgraph Storage["💾 Data Layer"]
+        SQLite[("SQLite<br/>agrisense_farmers.db<br/>Custom farmers persist")]
+        SS["session_state<br/>Status overrides<br/>Farmer profiles"]
+        Bundle["agrisense_model_bundle.pkl<br/>9.7 MB joblib"]
+    end
+
+    subgraph Future["🔮 Backend (future production)"]
+        FastAPI["FastAPI"]
+        SHAP["SHAP explainability"]
+        Gemini["Gemini AI summaries"]
+        APIs["SMHI · EU · FAO APIs"]
     end
 
     Farmer --> UI
     Analyst --> UI
     Bank --> UI
-    UI --> Routers
-    Routers --> Services
-    Services --> ORM
-    ORM --> DB
-    ED --> SMHI
-    ED --> EU
-    ED --> FAO
-    ED --> ESTAT
-    ML --> SH
-    SH --> GM
+    UI --> ML
+    UI --> Storage
+    RF --> FE
+    Future -.-> ML
 ```
 
 ---
@@ -75,18 +54,35 @@ graph TB
 
 ```mermaid
 flowchart LR
-    A["📄 Docs"] --> B["✅ Validate"]
-    B --> C["🧹 Clean"]
-    C --> D["📐 Ratios<br/>DSCR DTI LTV"]
-    D --> E["🔢 Features<br/>15 engineered"]
-    E --> F["🌲 RF Model<br/>Risk+Repay+Capacity"]
-    F --> G["📊 Risk Score"]
-    G --> H["🔍 SHAP"]
-    H --> I["📝 Memo<br/>Gemini AI"]
-    I --> J["👤 Human Decision"]
+    A["📄 Farmer Input<br/>Crop · ha · Years · Insurance"] --> B["💰 current_financials()<br/>Scaled by ha & crop multiplier"]
+    B --> C["📐 ratios()<br/>DSCR · DTI · OM · LTV<br/>CR · ICR · D/E · CFM · WC · AC"]
+    C --> D["🔢 predict()<br/>15 features → RF x3"]
+    D --> E["📊 Risk % · Repay % · Capacity kr"]
+    E --> F["📋 Memo<br/>Computed from actual ratios"]
+    F --> G["👤 Bank Decision"]
+```
 
-    K["🌦️ Weather<br/>SMHI"] --> E
-    L["📉 Commodity<br/>EU Agri-Food"] --> E
+---
+
+## Session State Architecture
+
+```mermaid
+flowchart TB
+    subgraph State["st.session_state"]
+        Pipeline["pipeline_overrides<br/>Status per farmer"]
+        Profiles["farmer_profiles<br/>Form inputs per farmer"]
+        User["farmer_user<br/>Current logged-in farmer"]
+        Role["role · analyst_app · bank_app"]
+        Workflow["memo_generated · memo_sent · bank_decision"]
+    end
+
+    subgraph Functions["Key Functions"]
+        GP["get_pipeline()<br/>Merge overrides"]
+        SF["save_farmer_profile()<br/>Persist farmer inputs"]
+        CF["current_farmer()<br/>Apply profiles for all roles"]
+    end
+
+    State --> Functions
 ```
 
 ---
@@ -95,20 +91,17 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    subgraph Local["💻 Local"]
-        L1["streamlit run"]
-        L2["uvicorn main"]
-    end
-    subgraph Docker["🐳 Docker"]
-        D1["docker-compose up"]
-        D2["FastAPI :8000"]
-        D3["Streamlit :8501"]
-    end
     subgraph Cloud["☁️ Cloud"]
-        C1["HF Spaces"]
-        C2["GitHub"]
+        C1["HF Spaces<br/>SuperNitro/Agri-Sense"]
+        C2["GitHub<br/>Uday-Kiran-01/AgriSense"]
     end
-    Local --> Docker --> Cloud
+    subgraph Files["📦 Required Files"]
+        F1["app.py"]
+        F2["agrisense_model_bundle.pkl"]
+        F3["requirements.txt"]
+    end
+    Files --> C1
+    C2 --> C1
 ```
 
 ---
@@ -117,11 +110,26 @@ flowchart TB
 
 | Layer | Technology | Why |
 |-------|-----------|-----|
-| Frontend | Streamlit 1.36 | Rapid prototyping, Python-native |
-| Backend | FastAPI 3.11 | Async, OpenAPI, API-first |
-| ML | scikit-learn RF × 3 | Explainable, tabular data |
-| Explainability | SHAP + Gemini AI | Per-prediction + plain language |
-| Database | SQLite WAL + SQLAlchemy | Simple, replaceable |
-| Container | Docker compose | Reproducible |
-| Deploy | HF Spaces + GitHub | Free, auto-rebuild |
-| APIs | SMHI, EU, FAOSTAT, Eurostat | Real Swedish/EU data |
+| Frontend | Streamlit 1.36 | Rapid prototyping, Python-native, single-file deploy |
+| ML | scikit-learn RF x 3 | Explainable, tabular data, joblib serialized |
+| Features | 15 engineered + 10 financial ratios | Transparent, auditable formulas |
+| Storage | SQLite (built-in) | Zero-config, custom farmers persist across restarts |
+| State | st.session_state | Pipeline overrides, farmer profiles survive reruns |
+| Deploy | HF Spaces + GitHub | Free, auto-rebuild, no backend needed |
+| Backend (future) | FastAPI + SHAP + Gemini | For production: explainability, APIs, auth |
+
+---
+
+## What the Demo App Actually Computes
+
+| Component | Real or Demo | Details |
+|-----------|-------------|---------|
+| 10 financial ratios | **Real** | Standard formulas (DSCR=EBITDA/TDS, DTI=debt/revenue, etc.) |
+| ML predictions | **Real** | Random Forest x3 on 15 features via joblib |
+| Feature scaling | **Real** | ha_scale + crop_multiplier from farmer input |
+| Scenario simulation | **Real** | Re-runs predict() with modified drought/price params |
+| Pipeline status flow | **Real** | session_state overrides survive Streamlit reruns |
+| Custom farmer registration | **Real** | SQLite persistence, auto-login after registration |
+| External intelligence | **Demo** | Template-based weather/prices, not live APIs |
+| Farmer data (8 built-in) | **Demo** | Synthetic Swedish farmers, GDPR-safe |
+
