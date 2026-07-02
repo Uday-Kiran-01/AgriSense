@@ -67,6 +67,10 @@ def current_farmer():
 def current_financials():
     cf = current_farmer()
     ha_scale = cf.get("ha", 85) / 85
+    # Crop-based revenue/expense adjustment
+    crop_mult = {"Hostvete": 1.0, "Varvete": 0.92, "Varkorn": 0.85, "Havre": 0.78, "Hostraps": 1.08}
+    rev_mult = crop_mult.get(cf.get("crop","Hostvete"), 1.0)
+    cost_mult = 1.05 if cf.get("crop") == "Hostraps" else 1.0  # Rapeseed has higher input costs
     # Adjust for farmer's actual DSCR vs Erik's baseline (1.32)
     target_dscr = cf.get("dscr", 1.32)
     dscr_ratio = 1.32 / max(target_dscr, 0.3)
@@ -74,8 +78,8 @@ def current_financials():
     result = []
     for f in FIN:
         adj = dict(f)
-        adj["rev"] = int(f["rev"] * ha_scale)
-        adj["opex"] = int(f["opex"] * ha_scale * (1 + (dscr_ratio - 1) * 0.3))
+        adj["rev"] = int(f["rev"] * ha_scale * rev_mult)
+        adj["opex"] = int(f["opex"] * ha_scale * (1 + (dscr_ratio - 1) * 0.3) * cost_mult)
         adj["int"] = int(f["int"] * ha_scale * (1 + (dscr_ratio - 1) * 0.5))
         adj["dep"] = int(f["dep"] * ha_scale)
         adj["ni"] = adj["rev"] - adj["opex"] - adj["int"] - adj["dep"]
