@@ -521,15 +521,29 @@ def product_banner(pred, role_label):
     rc = "#34d399" if pred and pred["level"]=="Low" else "#fbbf24" if pred and pred["level"]=="Medium" else "#f87171"
     rec = "Proceed" if pred and pred["level"]=="Low" else "Proceed with Conditions" if pred and pred["level"]=="Medium" else "Manual Review"
     conf = f"{pred['repay']:.0%}" if pred else "N/A"
-    evid = f"{cf.get('score',87)}%"  # Uses farmer's score as evidence completeness
+    evid = f"{cf.get('score',87)}%"
 
+    # Determine status from pipeline override or bank decision
     dec = st.session_state.bank_decision
+    memo_sent = st.session_state.memo_sent
+    memo_gen = st.session_state.memo_generated
+    pl_status = st.session_state.pipeline_overrides.get(cf["name"], cf.get("status", "Ready"))
+
     if dec:
         status_color = "#34d399" if dec["decision"] == "Approve" else "#fbbf24" if "Conditions" in dec["decision"] else "#f87171"
         status_text = f"DECIDED: {dec['decision'].upper()}"
+    elif memo_sent:
+        status_color = "#60a5fa"; status_text = "SENT TO BANK"
+    elif memo_gen:
+        status_color = "#fbbf24"; status_text = "UNDER REVIEW"
+    elif pl_status == "Submitted":
+        status_color = "#60a5fa"; status_text = "SUBMITTED"
+    elif pl_status in ("In Progress",):
+        status_color = "#fbbf24"; status_text = pl_status.upper()
+    elif pl_status == "Ready":
+        status_color = "#34d399"; status_text = "READY FOR ASSESSMENT"
     else:
-        status_color = "#34d399"
-        status_text = "READY FOR ASSESSMENT"
+        status_color = "#667085"; status_text = pl_status.upper()
 
     st.markdown(f"""
     <div class="product-banner">
