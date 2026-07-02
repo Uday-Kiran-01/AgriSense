@@ -51,7 +51,8 @@ def current_farmer():
         for p in PIPELINE:
             if p["name"] == name:
                 base = p; break
-    # Override with farmer's own form inputs if available — ONLY for farmer role
+    # Override with farmer's own form inputs if available - ONLY for farmer role
+    result = dict(base)
     if st.session_state.get("role") == "farmer":
         if st.session_state.get("farmer_crop"):
             result["crop"] = st.session_state.farmer_crop
