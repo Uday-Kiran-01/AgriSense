@@ -523,7 +523,13 @@ def memo_content(pred, r):
             c1,c2 = st.columns(2)
             with c1:
                 if st.button("📤 Send to Bank",type="primary",use_container_width=True):
-                    st.session_state.memo_sent = True; st.success("Credit package sent to bank!"); st.rerun()
+                    st.session_state.memo_sent = True
+                    # Update pipeline so everyone sees progress
+                    cf = current_farmer()
+                    for p in PIPELINE:
+                        if p["name"] == cf["name"]:
+                            p["status"] = "Sent to Bank"
+                    st.success("Credit package sent to bank!"); st.rerun()
             with c2:
                 if st.button("🔄 Regenerate",use_container_width=True):
                     st.session_state.memo_generated = False; st.rerun()
@@ -578,6 +584,12 @@ def decision_content():
                 "notes": notes if notes else "No additional notes.",
                 "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
             }
+            # Update pipeline so everyone sees the outcome
+            cf = current_farmer()
+            new_status = "Approved" if d=="Approve" else ("Approved w/ Cond" if "Conditions" in d else "Rejected")
+            for p in PIPELINE:
+                if p["name"] == cf["name"]:
+                    p["status"] = new_status
             st.success(f"Decision recorded: **{d}**")
             st.rerun()
     else:
@@ -700,15 +712,24 @@ def farmer_wizard():
             if st.button("← Edit",use_container_width=True): st.session_state.farmer_step=1;st.rerun()
         with c2:
             if st.button("📤 Submit to Credit Analyst",type="primary",use_container_width=True):
-                st.session_state.farmer_submitted = True; st.success("Submitted!"); st.balloons(); time.sleep(1); st.rerun()
+                st.session_state.farmer_submitted = True
+                # Update pipeline status so analyst sees it
+                cf = current_farmer()
+                for p in PIPELINE:
+                    if p["name"] == cf["name"]:
+                        p["status"] = "Submitted"
+                st.success("Submitted!"); st.balloons(); time.sleep(1); st.rerun()
 
 def farmer_dashboard():
     pred = predict(CFIN(), LOANS, CF()); r = ratios(CFIN(), LOANS)
     st.markdown("## My Application")
     st.caption("Your application has been submitted. Track status below.")
 
-    # Show bank decision if available, otherwise show submitted status
+    # Show progress: Submitted → Under Review → Sent to Bank → Decision
     dec = st.session_state.bank_decision
+    memo_sent = st.session_state.memo_sent
+    memo_gen = st.session_state.memo_generated
+
     if dec:
         color = "#34d399" if dec["decision"]=="Approve" else "#fbbf24" if "Conditions" in dec["decision"] else "#f87171"
         emoji = "✅" if dec["decision"]=="Approve" else "⚠️" if "Conditions" in dec["decision"] else "❌"
@@ -721,6 +742,12 @@ def farmer_dashboard():
             <div style="color:#667085;font-size:0.65rem;margin-top:0.5rem;">Recorded: {dec['timestamp']}</div>
         </div>
         """,unsafe_allow_html=True)
+    elif memo_sent:
+        st.markdown('<span class="badge badge-y" style="font-size:0.8rem;">📤 Sent to Bank</span>',unsafe_allow_html=True)
+        st.caption("Your application is with the bank officer for final decision.")
+    elif memo_gen:
+        st.markdown('<span class="badge badge-y" style="font-size:0.8rem;">📝 Under Review</span>',unsafe_allow_html=True)
+        st.caption("A credit analyst has prepared your assessment.")
     else:
         st.markdown('<span class="badge badge-g" style="font-size:0.8rem;">📤 Submitted</span>',unsafe_allow_html=True)
         st.caption("A credit analyst is reviewing your application.")
@@ -796,11 +823,26 @@ def analyst_pipeline():
         st.info(f"No applications with status: {af}")
         return
 
+    # Update pipeline statuses from session state
+    dec = st.session_state.bank_decision
+    memo_sent = st.session_state.memo_sent
+    if dec:
+        new_status = "Approved" if dec["decision"]=="Approve" else ("Approved w/ Cond" if "Conditions" in dec["decision"] else "Rejected")
+        for p in PIPELINE:
+            if p["name"] == st.session_state.analyst_app:
+                p["status"] = new_status
+    elif memo_sent:
+        for p in PIPELINE:
+            if p["name"] == st.session_state.analyst_app:
+                p["status"] = "Sent to Bank"
+
     for p in filtered:
-        sc = "#34d399" if p["status"]=="Ready" else "#fbbf24" if "Pending" in p["status"] else "#f87171" if "Needs" in p["status"] else "#60a5fa"
+        status = p['status']
+        sc = "#34d399" if status in ("Ready","Submitted","Approved") else "#fbbf24" if "Pending" in status or "Sent" in status or "Cond" in status else "#f87171" if "Needs" in status or status=="Rejected" else "#60a5fa"
+        badge = "g" if status in ("Ready","Submitted","Approved") else "y" if "Pending" in status or "Sent" in status or "Cond" in status else "r" if "Needs" in status or status=="Rejected" else "g"
         c1,c2,c3,c4,c5 = st.columns([2.5,1.5,1,1,1])
         with c1: st.markdown(f"**{p['name']}**  \n<small style='color:#667085'>{p.get('district','')}, {p['region']}</small>",unsafe_allow_html=True)
-        with c2: st.markdown(f"<span class='badge badge-{'g' if p['status']=='Ready' else 'y' if 'Pending' in p['status'] else 'r' if 'Needs' in p['status'] else 'g'}'>{p['status']}</span>",unsafe_allow_html=True)
+        with c2: st.markdown(f"<span class='badge badge-{badge}'>{status}</span>",unsafe_allow_html=True)
         with c3: st.markdown(f"<span style='color:#e8ecf1;font-size:0.85rem;font-weight:600;'>{p['score']}%</span>",unsafe_allow_html=True)
         with c4: st.markdown(f"<span style='color:#667085;font-size:0.8rem;'>DSCR {p['dscr']}</span>",unsafe_allow_html=True)
         with c5:
