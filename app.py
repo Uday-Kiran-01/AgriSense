@@ -6,7 +6,7 @@ Run: streamlit run app.py
 """
 import streamlit as st
 import numpy as np
-import joblib, time
+import joblib, time, sqlite3, json
 from datetime import datetime
 from pathlib import Path
 
@@ -42,6 +42,68 @@ PIPELINE = [
     {"id":"AG-2026-0007","name":"Peter Larsson","region":"Kalmar","district":"Vastervik","status":"Rejected","score":42,"dscr":0.55,"ha":30,"crop":"Havre","years":3,"uc":480,"insurance":False},
     {"id":"AG-2026-0008","name":"Sofia Berg","region":"Varmland","district":"Karlstad","status":"In Progress","score":72,"dscr":1.18,"ha":70,"crop":"Varkorn","years":12,"uc":690,"insurance":True},
 ]
+
+# ═══════════════ SQLite DATABASE ═══════════════
+DB_PATH = Path(__file__).resolve().parent / "agrisense_farmers.db"
+
+def init_db():
+    """Create farmers table if it doesn't exist."""
+    with sqlite3.connect(str(DB_PATH)) as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS farmers (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                region TEXT DEFAULT 'Skane',
+                district TEXT DEFAULT 'Lund',
+                status TEXT DEFAULT 'Ready',
+                score INTEGER DEFAULT 80,
+                dscr REAL DEFAULT 1.2,
+                ha INTEGER DEFAULT 50,
+                crop TEXT DEFAULT 'Hostvete',
+                years INTEGER DEFAULT 10,
+                uc INTEGER DEFAULT 650,
+                insurance INTEGER DEFAULT 1,
+                created_at TEXT DEFAULT (datetime('now','localtime'))
+            )
+        """)
+        conn.commit()
+
+def load_custom_farmers():
+    """Load custom farmers from SQLite and return as list of dicts."""
+    init_db()
+    with sqlite3.connect(str(DB_PATH)) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute("SELECT * FROM farmers ORDER BY created_at").fetchall()
+    return [{"id": r["id"], "name": r["name"], "region": r["region"],
+             "district": r["district"], "status": r["status"], "score": r["score"],
+             "dscr": r["dscr"], "ha": r["ha"], "crop": r["crop"],
+             "years": r["years"], "uc": r["uc"], "insurance": bool(r["insurance"])}
+            for r in rows]
+
+def save_farmer(farmer_dict):
+    """Insert a new farmer into SQLite. Returns True on success."""
+    init_db()
+    try:
+        with sqlite3.connect(str(DB_PATH)) as conn:
+            conn.execute("""
+                INSERT OR REPLACE INTO farmers (id, name, region, district, status, score, dscr, ha, crop, years, uc, insurance)
+                VALUES (:id, :name, :region, :district, :status, :score, :dscr, :ha, :crop, :years, :uc, :insurance)
+            """, farmer_dict)
+            conn.commit()
+        return True
+    except Exception as e:
+        st.error(f"Failed to save farmer: {e}")
+        return False
+
+def delete_farmer(farmer_id):
+    """Remove a custom farmer from the database."""
+    with sqlite3.connect(str(DB_PATH)) as conn:
+        conn.execute("DELETE FROM farmers WHERE id = ?", (farmer_id,))
+        conn.commit()
+
+# Merge custom farmers into PIPELINE (customs first, then built-ins)
+CUSTOM_FARMERS = load_custom_farmers()
+PIPELINE = CUSTOM_FARMERS + PIPELINE
 
 # Get current farmer data based on selected_app
 def current_farmer():
@@ -396,7 +458,7 @@ for k,v in {
     "role":None,"farmer_step":1,"analyst_app":None,"bank_app":None,"farmer_submitted":False,
     "bank_decision":None,"memo_generated":False,"memo_sent":False,"scenario_result":None,
     "farmer_crop":None,"farmer_ha":None,"farmer_years":None,"farmer_insurance":True,"farmer_invest":None,
-    "sim_drought":0.23,"sim_price":0.018,
+    "sim_drought":0.23,"sim_price":0.018,"registering":False,
 }.items():
     if k not in st.session_state: st.session_state[k]=v
 
@@ -719,6 +781,99 @@ def decision_content():
     else:
         st.button("✅ Submit Decision",type="primary",disabled=True)
 
+# ═══════════════ FARMER REGISTRATION ═══════════════
+SWEDISH_REGIONS = [
+    "Skane","Stockholm","Vastra Gotaland","Ostergotland","Uppsala","Halland",
+    "Kalmar","Varmland","Dalarna","Norrbotten","Jamtland"
+]
+CROPS = ["Hostvete","Varvete","Varkorn","Havre","Hostraps"]
+
+def register_farmer():
+    st.markdown("## 🌱 Register New Farmer")
+    st.caption("Add a custom farmer to the demo pipeline. They'll persist across restarts.")
+
+    # Show existing custom farmers
+    if CUSTOM_FARMERS:
+        with st.expander(f"📋 {len(CUSTOM_FARMERS)} Custom Farmer(s) in Database", expanded=False):
+            for cf in CUSTOM_FARMERS:
+                c1,c2 = st.columns([4,1])
+                with c1:
+                    st.markdown(f"**{cf['name']}** — {cf['district']}, {cf['region']} · {cf['ha']} ha {cf['crop']} · Score {cf['score']}% · DSCR {cf['dscr']}")
+                with c2:
+                    if st.button("🗑️ Remove", key=f"del_{cf['id']}"):
+                        delete_farmer(cf['id'])
+                        st.rerun()
+
+    st.divider()
+    st.markdown("### New Farmer Details")
+
+    c1,c2 = st.columns(2)
+    with c1:
+        name = st.text_input("Full Name *", placeholder="e.g., Oscar Nilsson", key="reg_name")
+        region = st.selectbox("Region *", SWEDISH_REGIONS, key="reg_region")
+        district = st.text_input("District *", placeholder="e.g., Malmo", key="reg_district")
+        crop = st.selectbox("Primary Crop", CROPS, key="reg_crop")
+    with c2:
+        ha = st.number_input("Farm Size (ha)", 5, 500, 80, key="reg_ha")
+        years = st.number_input("Years Farming", 1, 60, 12, key="reg_years")
+        insurance = st.checkbox("Has Crop Insurance", True, key="reg_insurance")
+        uc = st.slider("UC Credit Score", 300, 850, 680, key="reg_uc")
+
+    st.divider()
+    st.markdown("### Financial Profile (Optional)")
+    st.caption("Leave defaults for auto-estimated values based on farm size and crop.")
+
+    c1,c2,c3 = st.columns(3)
+    with c1:
+        score = st.slider("Evidence Score", 30, 100, 80, key="reg_score",
+                         help="Higher = more complete documentation & better track record")
+    with c2:
+        dscr = st.slider("DSCR (Debt Service Coverage)", 0.3, 3.0, 1.3, 0.01, key="reg_dscr",
+                        help=">1.25 is healthy. Below 1.0 means can't cover debt payments.")
+    with c3:
+        status = st.selectbox("Initial Pipeline Status",
+                             ["Ready","Pending Docs","Needs Review","In Progress"],
+                             key="reg_status")
+
+    st.divider()
+
+    # Auto-generate ID based on next available
+    existing_ids = [int(p["id"].split("-")[-1]) for p in PIPELINE if p["id"].startswith("AG-")]
+    next_id = max(existing_ids) + 1 if existing_ids else 1001
+    farmer_id = f"AG-2026-{next_id:04d}"
+
+    c1,c2,c3 = st.columns([1,1,1])
+    with c1:
+        if st.button("← Back to Home", use_container_width=True):
+            st.session_state.registering = False
+            st.rerun()
+    with c2:
+        can_save = bool(name.strip() and district.strip())
+        if not can_save:
+            st.warning("Name and District are required.")
+
+    with c3:
+        if st.button("💾 Save Farmer", type="primary", use_container_width=True, disabled=not can_save):
+            farmer = {
+                "id": farmer_id,
+                "name": name.strip(),
+                "region": region,
+                "district": district.strip(),
+                "status": status,
+                "score": score,
+                "dscr": round(dscr, 2),
+                "ha": ha,
+                "crop": crop,
+                "years": years,
+                "uc": uc,
+                "insurance": 1 if insurance else 0,
+            }
+            if save_farmer(farmer):
+                st.success(f"✅ {name.strip()} registered! (ID: {farmer_id})")
+                st.session_state.registering = False
+                time.sleep(0.8)
+                st.rerun()
+
 # ═══════════════ LANDING ═══════════════
 def landing():
     st.markdown('<div class="landing"><h1>AgriSense AI</h1><p class="sub">Explainable Decision Support for Agricultural Finance</p><p style="color:#667085;font-size:0.85rem;">Choose your perspective - same application, different view.</p><div class="role-row">',unsafe_allow_html=True)
@@ -734,7 +889,15 @@ def landing():
         if st.button("Bank View",key="lb",use_container_width=True,type="primary"): st.session_state.role="bank";st.rerun()
     st.markdown('</div></div>',unsafe_allow_html=True)
     st.divider()
-    st.caption("2,500 farmers · 11 regions · v1.1.0 · Advisory only")
+    c1,c2,_ = st.columns([1,1,2])
+    with c1:
+        count = len(CUSTOM_FARMERS)
+        label = f"🌱 Register New Farmer ({count} custom)" if count else "🌱 Register New Farmer"
+        if st.button(label, use_container_width=True, type="secondary"):
+            st.session_state.registering = True
+            st.rerun()
+    with c2:
+        st.caption("2,500 farmers · 11 regions · v1.2.0 · Advisory only")
 
 # ═══════════════ TOP BAR ═══════════════
 def top_bar(role, label):
@@ -1175,7 +1338,9 @@ def bank_workspace():
     st.markdown('<div class="warn">⚠️ <strong>Advisory Only:</strong> The AI recommendation is decision support. Final authority rests with the human loan officer per institutional credit policy.</div>',unsafe_allow_html=True)
 
 # ═══════════════ MAIN ═══════════════
-if st.session_state.role is None:
+if st.session_state.get("registering"):
+    register_farmer()
+elif st.session_state.role is None:
     landing()
 else:
     role_labels = {"farmer":"Farmer","analyst":"Credit Analyst","bank":"Bank Officer"}
