@@ -661,6 +661,13 @@ def farmer_wizard():
         with c1: st.metric("Farm", f"{cf.get('ha',85)} ha")
         with c2: st.metric("Experience", f"{cf.get('years',18)} years")
         with c3: st.metric("Region", f"{cf.get('district','Lund')}, {cf['region']}")
+        # Show machinery if set
+        mach = st.session_state.get('farmer_machinery')
+        if mach:
+            st.caption(f"🚜 Machinery: {', '.join(mach)}")
+        inv = st.session_state.get('farmer_invest')
+        if inv and inv != "No plans":
+            st.caption(f"📋 Planning to invest: {inv}")
         st.divider()
         if st.button("Start →",type="primary",use_container_width=True): st.session_state.farmer_step=2;st.rerun()
 
@@ -723,7 +730,21 @@ def farmer_wizard():
         with c3:
             st.markdown(f'<div class="card" style="text-align:center"><div style="font-size:2rem;color:#34d399">🟢 Covered</div><div style="color:#667085;font-size:0.7rem;">INSURANCE</div></div>',unsafe_allow_html=True)
         st.divider()
-        for icon,title,desc in [("📉","Reduce working capital loan","Paying down Landshypotek would improve your profile."),("🔄","Refinance tractor","Could reduce monthly payments by ~1,200 kr."),("📊","Build spring reserves","March-April show seasonal cash pressure.")]:
+        # Dynamic improvements based on actual ratios
+        dscr_val = r.get("dscr", 0)
+        dti_val = r.get("dti", 0)
+        imp = []
+        if dscr_val < 1.25:
+            imp.append(("📉", "Improve debt coverage", f"DSCR of {dscr_val:.2f}x is below 1.25x. Reduce existing loans or increase EBITDA."))
+        if dti_val > 0.40:
+            imp.append(("💰", "Reduce debt-to-income", f"DTI of {dti_val:.1%} is above 40%. Pay down debt or increase revenue."))
+        if not imp:
+            imp.append(("✅", "Strong profile", "Your ratios are healthy. Maintain current trajectory."))
+        # Always show invest tip if one is planned
+        inv = st.session_state.get('farmer_invest')
+        if inv and inv != "No plans":
+            imp.append(("📋", f"Evaluate {inv} investment", "Use the scenario simulator to see how this purchase affects your risk."))
+        for icon, title, desc in imp[:3]:
             st.markdown(f'<div class="card-sm"><strong style="color:#e8ecf1">{icon} {title}</strong><br><small style="color:#667085">{desc}</small></div>',unsafe_allow_html=True)
         st.divider()
         c1,c2 = st.columns(2)
@@ -781,7 +802,19 @@ def farmer_dashboard():
         st.markdown(f'<div class="card" style="text-align:center"><div style="font-size:2rem;color:#34d399">🟢 Covered</div><div style="color:#667085;font-size:0.7rem;">INSURANCE</div></div>',unsafe_allow_html=True)
 
     st.markdown('<div class="sec" style="margin-top:1.5rem;">Improvements</div>',unsafe_allow_html=True)
-    for icon,title,desc in [("📉","Reduce working capital loan","Paying down Landshypotek would improve debt coverage."),("🔄","Refinance tractor","Could save ~1,200 kr/month."),("📊","Build spring reserves","March-April show seasonal pressure.")]:
+    dscr_val = r.get("dscr", 0)
+    dti_val = r.get("dti", 0)
+    imp = []
+    if dscr_val < 1.25:
+        imp.append(("📉", "Improve debt coverage", f"DSCR of {dscr_val:.2f}x is below 1.25x. Reduce existing loans or increase EBITDA."))
+    if dti_val > 0.40:
+        imp.append(("💰", "Reduce debt-to-income", f"DTI of {dti_val:.1%} is above 40%. Pay down debt or increase revenue."))
+    if not imp:
+        imp.append(("✅", "Strong profile", "Your ratios are healthy. Maintain current trajectory."))
+    inv = st.session_state.get('farmer_invest')
+    if inv and inv != "No plans":
+        imp.append(("📋", f"Evaluate {inv} investment", "Use the scenario simulator to see how this purchase affects your risk."))
+    for icon, title, desc in imp[:3]:
         st.markdown(f'<div class="card-sm"><strong style="color:#e8ecf1">{icon} {title}</strong><br><small style="color:#667085">{desc}</small></div>',unsafe_allow_html=True)
 
     st.markdown('<div class="sec" style="margin-top:1.5rem;">Investment Simulator</div>',unsafe_allow_html=True)
@@ -791,7 +824,11 @@ def farmer_dashboard():
     else: st.info("Your profile is solid without additional debt.")
 
     st.divider()
-    st.info("📤 Your application is with the credit analyst. You'll be notified when the bank reviews it.")
+    # Only show this if no decision yet
+    if not st.session_state.bank_decision:
+        st.info("📤 Your application is being processed. You'll be notified when the bank reviews it.")
+    else:
+        st.success("Decision received! View the details above.")
 
 # ═══════════════ 🏢 CREDIT ANALYST ═══════════════
 def analyst_view():
