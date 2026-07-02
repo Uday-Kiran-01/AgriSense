@@ -489,13 +489,48 @@ button:has(div p) {
 /* ── Single-page: no scrollbars, compact ── */
 html, body, .stApp { overflow-x: hidden !important; }
 .stApp { overflow-y: auto !important; }
-[data-testid="stVerticalBlock"] { gap: 0.3rem !important; }
+[data-testid="stVerticalBlock"] { gap: 0.2rem !important; }
+[data-testid="stHorizontalBlock"] { gap: 0.3rem !important; }
 section[data-testid="stSidebar"] { display: none !important; }
-.stTabs [data-baseweb="tab"] { padding: 0.3rem 0.6rem !important; font-size: 0.7rem !important; }
+
+/* Compact tabs */
+.stTabs [data-baseweb="tab"] { padding: 0.25rem 0.5rem !important; font-size: 0.68rem !important; }
 .stTabs [data-baseweb="tab-list"] { gap: 0 !important; }
 .stTabs { margin-top: -0.5rem !important; }
-hr { margin: 0.3rem 0 !important; }
-.stCaption { margin-bottom: 0.2rem !important; }
+
+/* Compact spacing */
+hr { margin: 0.2rem 0 !important; }
+.stCaption { margin-bottom: 0.1rem !important; font-size: 0.7rem !important; }
+h1 { font-size: 1.5rem !important; margin: 0.3rem 0 !important; }
+h2 { font-size: 1.1rem !important; margin: 0.3rem 0 !important; }
+h3 { font-size: 0.9rem !important; margin: 0.2rem 0 !important; }
+
+/* Compact cards & metrics */
+.card { padding: 0.5rem 0.8rem !important; margin: 0.15rem 0 !important; }
+.card-sm { padding: 0.3rem 0.6rem !important; margin: 0.1rem 0 !important; }
+[data-testid="stMetric"] { margin: 0 !important; }
+[data-testid="stMetric"] label { font-size: 0.55rem !important; }
+[data-testid="stMetric"] div { font-size: 0.9rem !important; }
+
+/* Compact landing */
+.landing { min-height: auto !important; padding: 1rem 0 !important; }
+.landing h1 { font-size: 2.2rem !important; }
+.role-btn { padding: 0.8rem 1.5rem !important; min-width: 160px !important; }
+
+/* Compact product banner */
+.product-banner { padding: 0.5rem 1rem !important; margin-bottom: 0.5rem !important; }
+.banner-item .bv { font-size: 0.8rem !important; }
+.product-banner .app-id { margin-bottom: 0.2rem !important; }
+
+/* Compact pipeline rows */
+.stMarkdown p { margin-bottom: 0.1rem !important; }
+
+/* Mobile: even tighter */
+@media (max-width: 768px) {
+  .stTabs [data-baseweb="tab"] { font-size: 0.6rem !important; padding: 0.2rem 0.35rem !important; }
+  h1 { font-size: 1.2rem !important; }
+  h2 { font-size: 0.95rem !important; }
+}
 </style>""",unsafe_allow_html=True)
 
 # ═══════════════ STATE ═══════════════
