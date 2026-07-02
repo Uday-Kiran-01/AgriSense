@@ -706,8 +706,24 @@ def farmer_dashboard():
     pred = predict(CFIN(), LOANS, CF()); r = ratios(CFIN(), LOANS)
     st.markdown("## My Application")
     st.caption("Your application has been submitted. Track status below.")
-    st.markdown('<span class="badge badge-g" style="font-size:0.8rem;">📤 Submitted</span>',unsafe_allow_html=True)
-    st.caption("A credit analyst is reviewing your application.")
+
+    # Show bank decision if available, otherwise show submitted status
+    dec = st.session_state.bank_decision
+    if dec:
+        color = "#34d399" if dec["decision"]=="Approve" else "#fbbf24" if "Conditions" in dec["decision"] else "#f87171"
+        emoji = "✅" if dec["decision"]=="Approve" else "⚠️" if "Conditions" in dec["decision"] else "❌"
+        badge_class = "badge badge-g" if dec["decision"]=="Approve" else "badge badge-y" if "Conditions" in dec["decision"] else "badge badge-r"
+        st.markdown(f'<span class="{badge_class}" style="font-size:0.8rem;">{emoji} {dec["decision"].upper()}</span>',unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="card" style="margin-top:1rem;border-left:4px solid {color};">
+            <div style="font-size:1.1rem;font-weight:700;color:{color};">Bank Decision: {dec['decision']}</div>
+            <div style="color:#94a3b8;font-size:0.85rem;margin-top:0.3rem;">{dec['notes']}</div>
+            <div style="color:#667085;font-size:0.65rem;margin-top:0.5rem;">Recorded: {dec['timestamp']}</div>
+        </div>
+        """,unsafe_allow_html=True)
+    else:
+        st.markdown('<span class="badge badge-g" style="font-size:0.8rem;">📤 Submitted</span>',unsafe_allow_html=True)
+        st.caption("A credit analyst is reviewing your application.")
 
     c1,c2,c3 = st.columns(3)
     with c1:
