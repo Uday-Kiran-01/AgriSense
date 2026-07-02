@@ -522,6 +522,9 @@ def scenario_content(pred, r):
             st.info(f"Baseline risk: {base_risk:.1%}. Default conditions restored.")
 
 def memo_content(pred, r):
+    if pred is None:
+        st.warning("Model not loaded. Cannot generate memo.")
+        return
     if st.session_state.memo_generated:
         # Show the persisted memo
         rc = "#34d399" if pred and pred["level"]=="Low" else "#fbbf24"
@@ -750,9 +753,15 @@ def farmer_wizard():
             dscr = r.get("dscr",0); c = "#34d399" if dscr>=1.5 else "#fbbf24" if dscr>=1.0 else "#f87171"
             st.markdown(f'<div class="card" style="text-align:center"><div style="font-size:2rem;color:{c}">{"🟢 Strong" if dscr>=1.5 else "🟡 Adequate" if dscr>=1.0 else "🔴 Weak"}</div><div style="color:#667085;font-size:0.7rem;">REPAYMENT CAPACITY</div></div>',unsafe_allow_html=True)
         with c2:
-            st.markdown(f'<div class="card" style="text-align:center"><div style="font-size:2rem;color:#34d399">🟢 High</div><div style="color:#667085;font-size:0.7rem;">REPAYMENT LIKELIHOOD</div></div>',unsafe_allow_html=True)
+            repay_val = pred['repay']
+            rc2 = "#34d399" if repay_val>=0.85 else "#fbbf24" if repay_val>=0.70 else "#f87171"
+            label2 = "🟢 High" if repay_val>=0.85 else "🟡 Moderate" if repay_val>=0.70 else "🔴 Low"
+            st.markdown(f'<div class="card" style="text-align:center"><div style="font-size:2rem;color:{rc2}">{label2}</div><div style="color:#667085;font-size:0.7rem;">REPAYMENT LIKELIHOOD ({repay_val:.0%})</div></div>',unsafe_allow_html=True)
         with c3:
-            st.markdown(f'<div class="card" style="text-align:center"><div style="font-size:2rem;color:#34d399">🟢 Covered</div><div style="color:#667085;font-size:0.7rem;">INSURANCE</div></div>',unsafe_allow_html=True)
+            has_ins = CF().get("insurance", False)
+            ic = "#34d399" if has_ins else "#f87171"
+            il = "🟢 Covered" if has_ins else "🔴 Uninsured"
+            st.markdown(f'<div class="card" style="text-align:center"><div style="font-size:2rem;color:{ic}">{il}</div><div style="color:#667085;font-size:0.7rem;">INSURANCE</div></div>',unsafe_allow_html=True)
         st.divider()
         # Dynamic improvements based on actual ratios
         dscr_val = r.get("dscr", 0)
@@ -825,9 +834,15 @@ def farmer_dashboard():
         dscr = r.get("dscr",0); c = "#34d399" if dscr>=1.5 else "#fbbf24" if dscr>=1.0 else "#f87171"
         st.markdown(f'<div class="card" style="text-align:center"><div style="font-size:2rem;color:{c}">{"🟢 Strong" if dscr>=1.5 else "🟡 Adequate" if dscr>=1.0 else "🔴 Weak"}</div><div style="color:#667085;font-size:0.7rem;">REPAYMENT CAPACITY</div></div>',unsafe_allow_html=True)
     with c2:
-        st.markdown(f'<div class="card" style="text-align:center"><div style="font-size:2rem;color:#34d399">🟢 High</div><div style="color:#667085;font-size:0.7rem;">REPAYMENT LIKELIHOOD</div></div>',unsafe_allow_html=True)
+        repay_val = pred['repay']
+        rc2 = "#34d399" if repay_val>=0.85 else "#fbbf24" if repay_val>=0.70 else "#f87171"
+        label2 = "🟢 High" if repay_val>=0.85 else "🟡 Moderate" if repay_val>=0.70 else "🔴 Low"
+        st.markdown(f'<div class="card" style="text-align:center"><div style="font-size:2rem;color:{rc2}">{label2}</div><div style="color:#667085;font-size:0.7rem;">REPAYMENT LIKELIHOOD ({repay_val:.0%})</div></div>',unsafe_allow_html=True)
     with c3:
-        st.markdown(f'<div class="card" style="text-align:center"><div style="font-size:2rem;color:#34d399">🟢 Covered</div><div style="color:#667085;font-size:0.7rem;">INSURANCE</div></div>',unsafe_allow_html=True)
+        has_ins = CF().get("insurance", False)
+        ic = "#34d399" if has_ins else "#f87171"
+        il = "🟢 Covered" if has_ins else "🔴 Uninsured"
+        st.markdown(f'<div class="card" style="text-align:center"><div style="font-size:2rem;color:{ic}">{il}</div><div style="color:#667085;font-size:0.7rem;">INSURANCE</div></div>',unsafe_allow_html=True)
 
     st.markdown('<div class="sec" style="margin-top:1.5rem;">Improvements</div>',unsafe_allow_html=True)
     dscr_val = r.get("dscr", 0)
@@ -847,9 +862,21 @@ def farmer_dashboard():
 
     st.markdown('<div class="sec" style="margin-top:1.5rem;">Investment Simulator</div>',unsafe_allow_html=True)
     invest = st.radio("Planning to invest in a tractor?",["Not now","Maybe next year","Yes, soon"],horizontal=True,key="fd_invest")
-    if "Yes" in invest: st.success("Likely improves productivity. Risk impact: minimal.")
-    elif "Maybe" in invest: st.info("Build cash reserves first, then apply with stronger numbers.")
-    else: st.info("Your profile is solid without additional debt.")
+    if "Yes" in invest:
+        st.session_state.sim_drought = 0.23; st.session_state.sim_price = 0.02
+        new_p = predict(CFIN(), LOANS, CF())
+        if new_p:
+            delta = new_p['risk'] - pred['risk']
+            st.success(f"Risk: {pred['risk']:.1%} → {new_p['risk']:.1%} ({delta:+.1%}). Improved productivity may offset additional debt.")
+    elif "Maybe" in invest:
+        st.session_state.sim_drought = 0.45; st.session_state.sim_price = 0.025
+        new_p = predict(CFIN(), LOANS, CF())
+        if new_p:
+            delta = new_p['risk'] - pred['risk']
+            st.info(f"Risk: {pred['risk']:.1%} → {new_p['risk']:.1%} ({delta:+.1%}). Build cash reserves first for stronger numbers.")
+    else:
+        st.session_state.sim_drought = 0.23; st.session_state.sim_price = 0.018
+        st.info("Your profile is solid without additional debt.")
 
     st.divider()
     # Only show this if no decision yet
