@@ -512,11 +512,12 @@ def external_content():
     with c2: st.metric("Debt-to-Income", f"{r.get('dti',0):.1%}")
     with c3: st.metric("Operating Margin", f"{r.get('om',0):.1%}")
     with c4: st.metric("Debt Capacity", f"{pred['cap']/1000:.0f}K kr" if pred else "N/A")
-    # Seasonal Cash Flow
+    # Seasonal Cash Flow - scales with actual revenue
     cf = CF()
     rev = CFIN()[0]['rev']
     months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
     crop = cf.get("crop","Hostvete")
+    monthly_rev = rev / 12  # Average monthly revenue
     # Winter wheat: expenses spring, harvest Jul-Aug, income Aug-Sep
     if crop in ("Hostvete","Varvete"):
         inflow =  [0,0,0,0,0,0,30,40,20,10,0,0]
@@ -527,16 +528,16 @@ def external_content():
     else:
         inflow =  [5,5,5,5,10,15,20,20,10,5,0,0]
         outflow = [5,5,5,10,10,10,5,5,5,5,5,5]
-    st.markdown('<div class="sec" style="margin-top:1.2rem;">Seasonal Cash Flow (% of annual)</div>',unsafe_allow_html=True)
+    st.markdown('<div class="sec" style="margin-top:1.2rem;">Seasonal Cash Flow</div>',unsafe_allow_html=True)
     bar_html = '<div style="display:flex;gap:3px;align-items:flex-end;height:60px;">'
     for m, inn, out in zip(months, inflow, outflow):
-        net = inn - out
-        h = max(abs(net)*2, 4)
+        net = (inn - out) * monthly_rev / 100  # Convert % to actual SEK
+        h = max(abs(net) / (monthly_rev * 0.3) * 50, 4) if monthly_rev > 0 else 4
         color = "#34d399" if net >= 0 else "#f87171"
-        bar_html += f'<div style="flex:1;text-align:center;font-size:0.55rem;color:#5a6a7e;"><div style="background:{color};height:{h}px;border-radius:3px 3px 0 0;"></div>{m}</div>'
+        bar_html += f'<div style="flex:1;text-align:center;font-size:0.55rem;color:#5a6a7e;"><div style="background:{color};height:{min(h,55)}px;border-radius:3px 3px 0 0;"></div>{m}</div>'
     bar_html += '</div>'
     st.markdown(bar_html, unsafe_allow_html=True)
-    st.caption("🟢 Green = cash surplus month. 🔴 Red = cash deficit month. Swedish farms typically face spring pressure (seeds, fertilizer) before harvest income (Jul-Sep).")
+    st.caption(f"Monthly avg revenue: {monthly_rev/1000:.0f}K kr. Green = surplus. Red = deficit. Swedish farms face spring pressure before harvest income (Jul-Sep).")
 
 def ai_content(pred):
     if not pred: return
@@ -605,7 +606,7 @@ def memo_content(pred, r):
         <tr><td>Capacity</td><td style="color:#e8ecf1;text-align:right;">{pred['cap']/1000:.0f}K kr</td></tr></table>
         <div class="sec" style="margin-top:1rem;">Recommendation</div>
         <div style="font-size:1.1rem;font-weight:700;color:{rc};">{rec}</div>
-        <span style="color:#94a3b8;font-size:0.82rem;">Standard terms with quarterly review. Monitor spring liquidity.</span></div>""",unsafe_allow_html=True)
+        <span style="color:#94a3b8;font-size:0.82rem;">{("Standard terms with quarterly review. Monitor spring liquidity." if rec=="PROCEED" else "Additional documentation or collateral may be required. Close monitoring advised." if "CONDITIONS" in rec else "Application requires significant restructuring or additional guarantees before reconsideration.")}</span></div>""",unsafe_allow_html=True)
         if not st.session_state.memo_sent:
             c1,c2 = st.columns(2)
             with c1:
