@@ -1014,9 +1014,9 @@ def farmer_wizard():
     elif step == 2:
         st.markdown("## 📄 Documents")
         st.caption("We need these to assess your application.")
+        cf = current_farmer()
         st.checkbox(f"Use demo documents ({cf['name']})",True,disabled=True)
         # Vary docs based on farmer score
-        cf = current_farmer()
         score = cf.get("score", 87)
         all_docs = ["Bank Statement (2024)","Tax Returns (2022-24)","Land Registry","Existing Loans","Machinery Inventory","Crop Insurance"]
         missing = 0 if score >= 80 else 1 if score >= 60 else 2
