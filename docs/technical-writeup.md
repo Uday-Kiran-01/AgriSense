@@ -391,7 +391,7 @@ The most important finding was not the accuracy metrics. It was that **Drought I
 
 ---
 
-## 11. Future Work
+## 12. Future Work
 
 ### Near-term (Weeks)
 - Probability calibration (Platt Scaling)
