@@ -496,6 +496,38 @@ def timeline(pred, r, expanded_sections):
             render_fn()
             st.markdown('</div>',unsafe_allow_html=True)
 
+def financial_content(r, pred):
+    """Show financial ratios and analysis."""
+    if not r: return
+    cf = CF()
+    st.markdown(f"**{cf['name']}** · {cf.get('ha',85)} ha {cf.get('crop','Hostvete')} · {cf.get('years',18)} yrs farming")
+    c1,c2,c3,c4 = st.columns(4)
+    with c1:
+        dscr = r.get("dscr",0); dc = "#34d399" if dscr>=1.5 else "#fbbf24" if dscr>=1.0 else "#f87171"
+        st.markdown(f'<div class="card-sm"><span style="color:{dc};font-size:1.2rem;font-weight:700;">{dscr:.2f}x</span><br><small style="color:#667085;">DSCR</small></div>',unsafe_allow_html=True)
+    with c2:
+        dti = r.get("dti",0); dc2 = "#34d399" if dti<=0.35 else "#fbbf24" if dti<=0.50 else "#f87171"
+        st.markdown(f'<div class="card-sm"><span style="color:{dc2};font-size:1.2rem;font-weight:700;">{dti:.1%}</span><br><small style="color:#667085;">DTI</small></div>',unsafe_allow_html=True)
+    with c3:
+        om = r.get("om",0); dc3 = "#34d399" if om>=0.25 else "#fbbf24" if om>=0.15 else "#f87171"
+        st.markdown(f'<div class="card-sm"><span style="color:{dc3};font-size:1.2rem;font-weight:700;">{om:.1%}</span><br><small style="color:#667085;">Op. Margin</small></div>',unsafe_allow_html=True)
+    with c4:
+        ltv = r.get("ltv",0); dc4 = "#34d399" if ltv<=0.50 else "#fbbf24" if ltv<=0.70 else "#f87171"
+        st.markdown(f'<div class="card-sm"><span style="color:{dc4};font-size:1.2rem;font-weight:700;">{ltv:.1%}</span><br><small style="color:#667085;">LTV</small></div>',unsafe_allow_html=True)
+    c1,c2,c3,c4 = st.columns(4)
+    with c1:
+        cr = r.get("cr",0); dc5 = "#34d399" if cr>=1.5 else "#fbbf24" if cr>=1.0 else "#f87171"
+        st.markdown(f'<div class="card-sm"><span style="color:{dc5};font-size:1.2rem;font-weight:700;">{cr:.2f}x</span><br><small style="color:#667085;">Current Ratio</small></div>',unsafe_allow_html=True)
+    with c2:
+        icr = r.get("icr",0); dc6 = "#34d399" if icr>=3.0 else "#fbbf24" if icr>=1.5 else "#f87171"
+        st.markdown(f'<div class="card-sm"><span style="color:{dc6};font-size:1.2rem;font-weight:700;">{icr:.2f}x</span><br><small style="color:#667085;">Interest Coverage</small></div>',unsafe_allow_html=True)
+    with c3:
+        dte = r.get("dte",0); dc7 = "#34d399" if dte<=2.0 else "#fbbf24" if dte<=4.0 else "#f87171"
+        st.markdown(f'<div class="card-sm"><span style="color:{dc7};font-size:1.2rem;font-weight:700;">{dte:.2f}x</span><br><small style="color:#667085;">D/E Ratio</small></div>',unsafe_allow_html=True)
+    with c4:
+        cfm = r.get("cfm",0); dc8 = "#34d399" if cfm>=0.15 else "#fbbf24" if cfm>=0.05 else "#f87171"
+        st.markdown(f'<div class="card-sm"><span style="color:{dc8};font-size:1.2rem;font-weight:700;">{cfm:.1%}</span><br><small style="color:#667085;">Cash Flow Margin</small></div>',unsafe_allow_html=True)
+
 def external_content():
     cf = CF()
     region = cf.get('region','Skane')
@@ -995,26 +1027,27 @@ def analyst_pipeline():
 
     ready = sum(1 for p in PIPELINE if p["status"]=="Ready")
     pending = sum(1 for p in PIPELINE if "Pending" in p["status"])
-    review = sum(1 for p in PIPELINE if "Needs" in p["status"])
-    submitted = sum(1 for p in PIPELINE if "Submitted" in p["status"])
+    review = sum(1 for p in PIPELINE if p["status"]=="Needs Review")
+    submitted = sum(1 for p in PIPELINE if p["status"]=="Submitted")
     in_progress = sum(1 for p in PIPELINE if p["status"]=="In Progress")
+    sent_to_bank = sum(1 for p in PIPELINE if p["status"]=="Sent to Bank")
+    approved = sum(1 for p in PIPELINE if p["status"] in ("Approved","Approved w/ Cond"))
     rejected = sum(1 for p in PIPELINE if p["status"]=="Rejected")
     total = len(PIPELINE)
 
     if "analyst_filter" not in st.session_state: st.session_state.analyst_filter = "Ready"
     af = st.session_state.analyst_filter
 
-    # Colorful filter cards - emoji + label baked into button text
     filters = [
         ("Ready", ready, "🟢"),
         ("Pending Docs", pending, "🟡"),
         ("Needs Review", review, "🔴"),
-        ("In Progress", in_progress, "🔵"),
         ("Submitted", submitted, "🟣"),
-        ("All", total, "⚪"),
+        ("In Progress", in_progress, "🔵"),
+        ("Sent to Bank", sent_to_bank, "📤"),
     ]
 
-    fcols = st.columns(6)
+    fcols = st.columns(len(filters))
     for i, (label, count, emoji) in enumerate(filters):
         with fcols[i]:
             active = af == label
@@ -1077,21 +1110,21 @@ def bank_pipeline():
     total = len(PIPELINE)
     ready = sum(1 for p in PIPELINE if p["status"]=="Ready")
     submitted = sum(1 for p in PIPELINE if p["status"]=="Submitted")
-    in_progress = sum(1 for p in PIPELINE if p["status"]=="In Progress")
+    sent_to_bank = sum(1 for p in PIPELINE if p["status"]=="Sent to Bank")
+    approved = sum(1 for p in PIPELINE if p["status"] in ("Approved","Approved w/ Cond"))
+    in_progress = sum(1 for p in PIPELINE if p["status"] in ("In Progress","Pending Docs","Needs Review"))
     rejected = sum(1 for p in PIPELINE if p["status"]=="Rejected")
-    needs_review = sum(1 for p in PIPELINE if p["status"]=="Needs Review")
-    pending = sum(1 for p in PIPELINE if p["status"]=="Pending Docs")
 
     if "bank_filter" not in st.session_state: st.session_state.bank_filter = "Awaiting"
     active_filter = st.session_state.bank_filter
 
-    # Colorful filter cards - emoji + label baked into button text
+    # Colorful filter cards
     filters = [
-        ("Awaiting", ready+submitted, "🔵"),
-        ("In Progress", in_progress+needs_review+pending, "🟡"),
+        ("Awaiting", ready+submitted+sent_to_bank, "🔵"),
+        ("In Progress", in_progress, "🟡"),
+        ("Approved", approved, "🟢"),
         ("Rejected", rejected, "🔴"),
-        ("Submitted", submitted, "🟢"),
-        ("Needs Review", needs_review, "🟠"),
+        ("Submitted", submitted, "🟣"),
         ("All", total, "⚪"),
     ]
 
@@ -1107,7 +1140,9 @@ def bank_pipeline():
 
     # Filter pipeline
     if active_filter == "Awaiting":
-        filtered = [p for p in PIPELINE if p["status"] in ("Ready","Submitted")]
+        filtered = [p for p in PIPELINE if p["status"] in ("Ready","Submitted","Sent to Bank")]
+    elif active_filter == "Approved":
+        filtered = [p for p in PIPELINE if p["status"] in ("Approved","Approved w/ Cond")]
     elif active_filter == "All":
         filtered = PIPELINE
     else:
@@ -1120,7 +1155,7 @@ def bank_pipeline():
     for p in filtered:
         c1,c2,c3,c4,c5 = st.columns([2.5,1.5,1,1,1])
         with c1: st.markdown(f"**{p['name']}**  \n<small style='color:#667085'>{p.get('district','')}, {p['region']}</small>",unsafe_allow_html=True)
-        with c2: st.markdown(f"<span class='badge badge-{'g' if p['status'] in ('Ready','Submitted') else 'y' if p['status'] in ('Pending Docs','In Progress') else 'r'}'>{p['status']}</span>",unsafe_allow_html=True)
+        with c2: st.markdown(f"<span class='badge badge-{'g' if p['status'] in ('Ready','Submitted','Approved','Sent to Bank') else 'y' if p['status'] in ('Pending Docs','In Progress','Approved w/ Cond') else 'r'}'>{p['status']}</span>",unsafe_allow_html=True)
         with c3: st.markdown(f"<span style='color:#e8ecf1;font-size:0.85rem;font-weight:600;'>{p['score']}%</span>",unsafe_allow_html=True)
         with c4: st.markdown(f"<span style='color:#667085;font-size:0.8rem;'>DSCR {p['dscr']}</span>",unsafe_allow_html=True)
         with c5:
