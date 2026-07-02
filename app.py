@@ -485,6 +485,17 @@ button:has(div p) {
   .landing h1{font-size:1.7rem!important}
   button:has(div p){font-size:0.72rem!important;min-height:40px!important}
 }
+
+/* ── Single-page: no scrollbars, compact ── */
+html, body, .stApp { overflow-x: hidden !important; }
+.stApp { overflow-y: auto !important; }
+[data-testid="stVerticalBlock"] { gap: 0.3rem !important; }
+section[data-testid="stSidebar"] { display: none !important; }
+.stTabs [data-baseweb="tab"] { padding: 0.3rem 0.6rem !important; font-size: 0.7rem !important; }
+.stTabs [data-baseweb="tab-list"] { gap: 0 !important; }
+.stTabs { margin-top: -0.5rem !important; }
+hr { margin: 0.3rem 0 !important; }
+.stCaption { margin-bottom: 0.2rem !important; }
 </style>""",unsafe_allow_html=True)
 
 # ═══════════════ STATE ═══════════════
@@ -564,88 +575,65 @@ def product_banner(pred, role_label):
 
 # ═══════════════ TIMELINE ═══════════════
 def timeline(pred, r, expanded_sections):
-    """Render the 8-step application journey timeline. Click any step to expand/collapse."""
-    if "timeline_expanded" not in st.session_state:
-        st.session_state.timeline_expanded = set()
+    """Render the 8-step application journey as tabs - everything on one page."""
+    import collections
+    # Determine default active tab
+    active_tab = None
+    for section in expanded_sections:
+        active_tab = section
+        break
+    if not active_tab:
+        active_tab = "financials"
 
-    steps = [
-        (1, "Documents", "documents", "✅ Verified", True,
-         lambda: st.markdown(f"✅ Bank Statements · ✅ Tax Returns · ✅ Land Registry · ✅ Loans · ⚠️ Machinery · ✅ Insurance\n\nReliability: **{CF().get('score',87)}%**")),
-        (2, "Validation", "validation", "✅ Passed", True,
-         lambda: st.markdown("All documents validated. Currency standardized to SEK. Area converted to hectares. No critical issues.")),
-        (3, "Financial Analysis", "financials", "✅ Complete", True,
-         lambda: financial_content(r, pred)),
-        (4, "External Intelligence", "external", "✅ Live", True,
-         lambda: external_content(r, pred)),
-        (5, "AI Assessment", "ai", "✅ Complete", True,
-         lambda: ai_content(pred)),
-        (6, "Scenario Simulation", "scenario", "⚡ Run", False,
-         lambda: scenario_content(pred, r)),
-        (7, "Decision Memo", "memo",
-         "📤 Sent to Bank" if st.session_state.memo_sent else "✅ Generated" if st.session_state.memo_generated else "📝 Generate",
-         st.session_state.memo_generated,
-         lambda: memo_content(pred, r)),
-        (8, "Final Decision", "decision",
-         f"✅ {st.session_state.bank_decision['decision']}" if st.session_state.bank_decision else "⏳ Pending",
-         bool(st.session_state.bank_decision),
-         lambda: decision_content()),
-    ]
+    # Status badges
+    memo_status = "📤 Sent" if st.session_state.memo_sent else ("✅ Done" if st.session_state.memo_generated else "📝 Ready")
+    dec_status = f"✅ {st.session_state.bank_decision['decision']}" if st.session_state.bank_decision else "⏳ Pending"
 
-    for num, title, key, status, done, render_fn in steps:
-        # Section is expanded if: toggled by user, OR in default expanded_sections, OR auto-expand rule
-        is_expanded = (key in st.session_state.timeline_expanded or
-                       key in expanded_sections or
-                       (done and key in ["financials","ai"]))
-        num_cls = "done" if done else "active" if is_expanded else ""
+    tabs = st.tabs([
+        "📄 Docs", "🔍 Validation", "📊 Financials", "🌍 External",
+        "🤖 AI", "🎯 Scenario", f"📋 Memo ({memo_status})", f"⚖️ Decision ({dec_status})"
+    ])
 
-        # Clickable header
-        arrow = "▼" if is_expanded else "▶"
-        if st.button(f"{arrow} {title} - {status}", key=f"tl_{key}",
-                     use_container_width=True,
-                     type="secondary"):
-            if key in st.session_state.timeline_expanded:
-                st.session_state.timeline_expanded.discard(key)
-            else:
-                st.session_state.timeline_expanded.add(key)
-            st.rerun()
-
-        # Expanded body
-        if is_expanded:
-            st.markdown(f'<div class="timeline-body">',unsafe_allow_html=True)
-            render_fn()
-            st.markdown('</div>',unsafe_allow_html=True)
+    with tabs[0]:
+        st.caption(f"Reliability: **{CF().get('score',87)}%**")
+        st.markdown("✅ Bank Statements · ✅ Tax Returns · ✅ Land Registry\n✅ Loans · ⚠️ Machinery · ✅ Insurance")
+    with tabs[1]:
+        st.caption("All documents validated. Currency standardized to SEK. Area converted to hectares.")
+    with tabs[2]:
+        financial_content(r, pred)
+    with tabs[3]:
+        external_content(r, pred)
+    with tabs[4]:
+        ai_content(pred)
+    with tabs[5]:
+        scenario_content(pred, r)
+    with tabs[6]:
+        memo_content(pred, r)
+    with tabs[7]:
+        decision_content()
 
 def financial_content(r, pred):
-    """Show financial ratios and analysis."""
+    """Show financial ratios compactly."""
     if not r: return
     cf = CF()
-    st.markdown(f"**{cf['name']}** · {cf.get('ha',85)} ha {cf.get('crop','Hostvete')} · {cf.get('years',18)} yrs farming")
-    c1,c2,c3,c4 = st.columns(4)
-    with c1:
-        dscr = r.get("dscr",0); dc = "#34d399" if dscr>=1.5 else "#fbbf24" if dscr>=1.0 else "#f87171"
-        st.markdown(f'<div class="card-sm"><span style="color:{dc};font-size:1.2rem;font-weight:700;">{dscr:.2f}x</span><br><small style="color:#667085;">DSCR</small></div>',unsafe_allow_html=True)
-    with c2:
-        dti = r.get("dti",0); dc2 = "#34d399" if dti<=0.35 else "#fbbf24" if dti<=0.50 else "#f87171"
-        st.markdown(f'<div class="card-sm"><span style="color:{dc2};font-size:1.2rem;font-weight:700;">{dti:.1%}</span><br><small style="color:#667085;">DTI</small></div>',unsafe_allow_html=True)
-    with c3:
-        om = r.get("om",0); dc3 = "#34d399" if om>=0.25 else "#fbbf24" if om>=0.15 else "#f87171"
-        st.markdown(f'<div class="card-sm"><span style="color:{dc3};font-size:1.2rem;font-weight:700;">{om:.1%}</span><br><small style="color:#667085;">Op. Margin</small></div>',unsafe_allow_html=True)
-    with c4:
-        ltv = r.get("ltv",0); dc4 = "#34d399" if ltv<=0.50 else "#fbbf24" if ltv<=0.70 else "#f87171"
-        st.markdown(f'<div class="card-sm"><span style="color:{dc4};font-size:1.2rem;font-weight:700;">{ltv:.1%}</span><br><small style="color:#667085;">LTV</small></div>',unsafe_allow_html=True)
-    c1,c2,c3,c4 = st.columns(4)
-    with c1:
-        cr = r.get("cr",0); dc5 = "#34d399" if cr>=1.5 else "#fbbf24" if cr>=1.0 else "#f87171"
-        st.markdown(f'<div class="card-sm"><span style="color:{dc5};font-size:1.2rem;font-weight:700;">{cr:.2f}x</span><br><small style="color:#667085;">Current Ratio</small></div>',unsafe_allow_html=True)
-    with c2:
-        icr = r.get("icr",0); dc6 = "#34d399" if icr>=3.0 else "#fbbf24" if icr>=1.5 else "#f87171"
-        st.markdown(f'<div class="card-sm"><span style="color:{dc6};font-size:1.2rem;font-weight:700;">{icr:.2f}x</span><br><small style="color:#667085;">Interest Coverage</small></div>',unsafe_allow_html=True)
-    with c3:
-        dte = r.get("dte",0); dc7 = "#34d399" if dte<=2.0 else "#fbbf24" if dte<=4.0 else "#f87171"
-        st.markdown(f'<div class="card-sm"><span style="color:{dc7};font-size:1.2rem;font-weight:700;">{dte:.2f}x</span><br><small style="color:#667085;">D/E Ratio</small></div>',unsafe_allow_html=True)
-    with c4:
-        cfm = r.get("cfm",0); dc8 = "#34d399" if cfm>=0.15 else "#fbbf24" if cfm>=0.05 else "#f87171"
-        st.markdown(f'<div class="card-sm"><span style="color:{dc8};font-size:1.2rem;font-weight:700;">{cfm:.1%}</span><br><small style="color:#667085;">Cash Flow Margin</small></div>',unsafe_allow_html=True)
+    st.caption(f"{cf['name']} · {cf.get('ha',85)} ha {cf.get('crop','Hostvete')} · {cf.get('years',18)} yrs")
+
+    def ratio_card(label, value, threshold_good, threshold_warn):
+        c = "#34d399" if value >= threshold_good else "#fbbf24" if value >= threshold_warn else "#f87171"
+        return f'<span style="color:{c};font-weight:700;">{value}</span> <small style="color:#667085;">{label}</small>'
+
+    dscr = r.get("dscr",0); dti = r.get("dti",0); om = r.get("om",0); ltv = r.get("ltv",0)
+    cr = r.get("cr",0); icr = r.get("icr",0); dte = r.get("dte",0); cfm = r.get("cfm",0)
+
+    cols = st.columns(8)
+    with cols[0]: st.markdown(ratio_card("DSCR", f"{dscr:.2f}x", 1.5, 1.0), unsafe_allow_html=True)
+    with cols[1]: st.markdown(ratio_card("DTI", f"{dti:.1%}", 0.35, 0.50), unsafe_allow_html=True)
+    with cols[2]: st.markdown(ratio_card("OM", f"{om:.1%}", 0.25, 0.15), unsafe_allow_html=True)
+    with cols[3]: st.markdown(ratio_card("LTV", f"{ltv:.1%}", 0.50, 0.70), unsafe_allow_html=True)
+    with cols[4]: st.markdown(ratio_card("CR", f"{cr:.2f}x", 1.5, 1.0), unsafe_allow_html=True)
+    with cols[5]: st.markdown(ratio_card("ICR", f"{icr:.2f}x", 3.0, 1.5), unsafe_allow_html=True)
+    with cols[6]: st.markdown(ratio_card("D/E", f"{dte:.2f}x", 2.0, 4.0), unsafe_allow_html=True)
+    with cols[7]: st.markdown(ratio_card("CFM", f"{cfm:.1%}", 0.15, 0.05), unsafe_allow_html=True)
 
 def external_content(r=None, pred=None):
     cf = CF()
