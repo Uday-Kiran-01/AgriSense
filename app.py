@@ -33,14 +33,14 @@ LOANS = [
     {"lender":"Swedbank","amt":200000,"out":50000,"rate":5.2,"emi":4200,"tenure":60,"on_time":28,"due":30},
 ]
 PIPELINE = [
-    {"id":"AG-2026-0001","name":"Erik Johansson","region":"Skane","district":"Lund","status":"Ready","score":87,"dscr":1.32,"ha":85,"crop":"Hostvete","years":18,"uc":720,"insurance":True},
-    {"id":"AG-2026-0002","name":"Anna Nilsson","region":"Ostergotland","district":"Linkoping","status":"Ready","score":82,"dscr":1.45,"ha":120,"crop":"Varvete","years":22,"uc":780,"insurance":True},
-    {"id":"AG-2026-0003","name":"Lars Persson","region":"Vastra Gotaland","district":"Skovde","status":"Pending Docs","score":65,"dscr":0.95,"ha":65,"crop":"Havre","years":8,"uc":610,"insurance":True},
-    {"id":"AG-2026-0004","name":"Maria Andersson","region":"Halland","district":"Falkenberg","status":"Needs Review","score":58,"dscr":0.78,"ha":45,"crop":"Varkorn","years":5,"uc":550,"insurance":False},
-    {"id":"AG-2026-0005","name":"Johan Karlsson","region":"Skane","district":"Ystad","status":"Ready","score":91,"dscr":1.85,"ha":150,"crop":"Hostvete","years":25,"uc":820,"insurance":True},
+    {"id":"AG-2026-0001","name":"Erik Johansson","region":"Skane","district":"Lund","status":"New Application","score":87,"dscr":1.32,"ha":85,"crop":"Hostvete","years":18,"uc":720,"insurance":True},
+    {"id":"AG-2026-0002","name":"Anna Nilsson","region":"Ostergotland","district":"Linkoping","status":"New Application","score":82,"dscr":1.45,"ha":120,"crop":"Varvete","years":22,"uc":780,"insurance":True},
+    {"id":"AG-2026-0003","name":"Lars Persson","region":"Vastra Gotaland","district":"Skovde","status":"Missing Docs","score":65,"dscr":0.95,"ha":65,"crop":"Havre","years":8,"uc":610,"insurance":True},
+    {"id":"AG-2026-0004","name":"Maria Andersson","region":"Halland","district":"Falkenberg","status":"Flagged","score":58,"dscr":0.78,"ha":45,"crop":"Varkorn","years":5,"uc":550,"insurance":False},
+    {"id":"AG-2026-0005","name":"Johan Karlsson","region":"Skane","district":"Ystad","status":"New Application","score":91,"dscr":1.85,"ha":150,"crop":"Hostvete","years":25,"uc":820,"insurance":True},
     {"id":"AG-2026-0006","name":"Karin Svensson","region":"Uppsala","district":"Enkoping","status":"Submitted","score":88,"dscr":1.52,"ha":95,"crop":"Hostraps","years":15,"uc":740,"insurance":True},
     {"id":"AG-2026-0007","name":"Peter Larsson","region":"Kalmar","district":"Vastervik","status":"Rejected","score":42,"dscr":0.55,"ha":30,"crop":"Havre","years":3,"uc":480,"insurance":False},
-    {"id":"AG-2026-0008","name":"Sofia Berg","region":"Varmland","district":"Karlstad","status":"In Progress","score":72,"dscr":1.18,"ha":70,"crop":"Varkorn","years":12,"uc":690,"insurance":True},
+    {"id":"AG-2026-0008","name":"Sofia Berg","region":"Varmland","district":"Karlstad","status":"Under Review","score":72,"dscr":1.18,"ha":70,"crop":"Varkorn","years":12,"uc":690,"insurance":True},
 ]
 
 # ═══════════════ SQLite DATABASE ═══════════════
@@ -539,7 +539,7 @@ def product_banner(pred, role_label):
     dec = st.session_state.bank_decision
     memo_sent = st.session_state.memo_sent
     memo_gen = st.session_state.memo_generated
-    pl_status = st.session_state.pipeline_overrides.get(cf["name"], cf.get("status", "Ready"))
+    pl_status = st.session_state.pipeline_overrides.get(cf["name"], cf.get("status", "New Application"))
 
     if dec:
         status_color = "#34d399" if dec["decision"] == "Approve" else "#fbbf24" if "Conditions" in dec["decision"] else "#f87171"
@@ -550,10 +550,11 @@ def product_banner(pred, role_label):
         status_color = "#fbbf24"; status_text = "UNDER REVIEW"
     elif pl_status == "Submitted":
         status_color = "#60a5fa"; status_text = "SUBMITTED"
-    elif pl_status in ("In Progress",):
+    elif pl_status in ("Under Review",):
         status_color = "#fbbf24"; status_text = pl_status.upper()
-    elif pl_status == "Ready":
-        status_color = "#34d399"; status_text = "READY FOR ASSESSMENT"
+    elif pl_status in ("New Application","Missing Docs","Flagged"):
+        status_color = "#34d399" if pl_status == "New Application" else "#fbbf24" if pl_status == "Missing Docs" else "#f87171"
+        status_text = pl_status.upper()
     else:
         status_color = "#667085"; status_text = pl_status.upper()
 
@@ -877,7 +878,7 @@ def register_farmer():
                         help=">1.25 is healthy. Below 1.0 means can't cover debt payments.")
     with c3:
         status = st.selectbox("Initial Pipeline Status",
-                             ["Ready","Pending Docs","Needs Review","In Progress"],
+                             ["New Application","Missing Docs","Flagged","Under Review"],
                              key="reg_status")
 
     st.divider()
@@ -1244,25 +1245,25 @@ def analyst_pipeline():
     st.markdown('<div class="info" style="margin-bottom:1rem;font-size:0.75rem;">🔬 <strong>Demo Mode:</strong> In production, analysts see only their assigned portfolio. All 8 farmers are shown here for demonstration of the full assessment workflow.</div>',unsafe_allow_html=True)
 
     pl = get_pipeline()
-    ready = sum(1 for p in pl if p["status"]=="Ready")
-    pending = sum(1 for p in pl if "Pending" in p["status"])
-    review = sum(1 for p in pl if p["status"]=="Needs Review")
+    ready = sum(1 for p in pl if p["status"]=="New Application")
+    pending = sum(1 for p in pl if p["status"]=="Missing Docs")
+    review = sum(1 for p in pl if p["status"]=="Flagged")
     submitted = sum(1 for p in pl if p["status"]=="Submitted")
-    in_progress = sum(1 for p in pl if p["status"]=="In Progress")
+    in_progress = sum(1 for p in pl if p["status"]=="Under Review")
     sent_to_bank = sum(1 for p in pl if p["status"]=="Sent to Bank")
     approved = sum(1 for p in pl if p["status"] in ("Approved","Approved w/ Cond"))
     rejected = sum(1 for p in pl if p["status"]=="Rejected")
     total = len(pl)
 
-    if "analyst_filter" not in st.session_state: st.session_state.analyst_filter = "Ready"
+    if "analyst_filter" not in st.session_state: st.session_state.analyst_filter = "New Application"
     af = st.session_state.analyst_filter
 
     filters = [
-        ("Ready", ready, "🟢"),
-        ("Pending Docs", pending, "🟡"),
-        ("Needs Review", review, "🔴"),
+        ("New Application", ready, "🟢"),
+        ("Missing Docs", pending, "🟡"),
+        ("Flagged", review, "🔴"),
         ("Submitted", submitted, "🟣"),
-        ("In Progress", in_progress, "🔵"),
+        ("Under Review", in_progress, "🔵"),
         ("Sent to Bank", sent_to_bank, "📤"),
     ]
 
@@ -1296,7 +1297,7 @@ def analyst_pipeline():
 
     for p in filtered:
         status = p['status']
-        badge = "g" if status in ("Ready","Submitted","Approved") else "y" if "Pending" in status or "Sent" in status or "Cond" in status else "r" if "Needs" in status or status=="Rejected" else "g"
+        badge = "g" if status in ("New Application","Submitted","Approved","Sent to Bank") else "y" if status in ("Missing Docs","Under Review","Approved w/ Cond") else "r" if status in ("Flagged","Rejected") else "g"
         c1,c2,c3,c4,c5 = st.columns([2.5,1.5,1,1,1])
         with c1: st.markdown(f"**{p['name']}**  \n<small style='color:#667085'>{p.get('district','')}, {p['region']}</small>",unsafe_allow_html=True)
         with c2: st.markdown(f"<span class='badge badge-{badge}'>{status}</span>",unsafe_allow_html=True)
@@ -1327,11 +1328,11 @@ def bank_pipeline():
 
     pl = get_pipeline()
     total = len(pl)
-    ready = sum(1 for p in pl if p["status"]=="Ready")
+    ready = sum(1 for p in pl if p["status"]=="New Application")
     submitted = sum(1 for p in pl if p["status"]=="Submitted")
     sent_to_bank = sum(1 for p in pl if p["status"]=="Sent to Bank")
     approved = sum(1 for p in pl if p["status"] in ("Approved","Approved w/ Cond"))
-    in_progress = sum(1 for p in pl if p["status"] in ("In Progress","Pending Docs","Needs Review"))
+    in_progress = sum(1 for p in pl if p["status"] in ("Under Review","Missing Docs","Flagged"))
     rejected = sum(1 for p in pl if p["status"]=="Rejected")
 
     if "bank_filter" not in st.session_state: st.session_state.bank_filter = "Awaiting"
@@ -1359,7 +1360,7 @@ def bank_pipeline():
 
     # Filter pipeline
     if active_filter == "Awaiting":
-        filtered = [p for p in pl if p["status"] in ("Ready","Submitted","Sent to Bank")]
+        filtered = [p for p in pl if p["status"] in ("New Application","Submitted","Sent to Bank")]
     elif active_filter == "Approved":
         filtered = [p for p in pl if p["status"] in ("Approved","Approved w/ Cond")]
     elif active_filter == "All":
@@ -1374,7 +1375,7 @@ def bank_pipeline():
     for p in filtered:
         c1,c2,c3,c4,c5 = st.columns([2.5,1.5,1,1,1])
         with c1: st.markdown(f"**{p['name']}**  \n<small style='color:#667085'>{p.get('district','')}, {p['region']}</small>",unsafe_allow_html=True)
-        with c2: st.markdown(f"<span class='badge badge-{'g' if p['status'] in ('Ready','Submitted','Approved','Sent to Bank') else 'y' if p['status'] in ('Pending Docs','In Progress','Approved w/ Cond') else 'r'}'>{p['status']}</span>",unsafe_allow_html=True)
+        with c2: st.markdown(f"<span class='badge badge-{'g' if p['status'] in ('New Application','Submitted','Approved','Sent to Bank') else 'y' if p['status'] in ('Missing Docs','Under Review','Approved w/ Cond') else 'r'}'>{p['status']}</span>",unsafe_allow_html=True)
         with c3: st.markdown(f"<span style='color:#e8ecf1;font-size:0.85rem;font-weight:600;'>{p['score']}%</span>",unsafe_allow_html=True)
         with c4: st.markdown(f"<span style='color:#667085;font-size:0.8rem;'>DSCR {p['dscr']}</span>",unsafe_allow_html=True)
         with c5:
