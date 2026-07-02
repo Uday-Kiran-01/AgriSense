@@ -18,7 +18,7 @@ graph TB
     subgraph Frontend["🖥️ Standalone Streamlit App"]
         UI["app.py<br/>~1400 lines<br/>Single-file"]
         CSS["Dark theme<br/>Responsive"]
-        Tabs["8-tab timeline<br/>Single-page layout"]
+        Tabs["Tab-based timeline<br/>7 tabs (analyst)<br/>8 tabs (bank)"]
     end
 
     subgraph ML["🌲 Embedded ML"]
