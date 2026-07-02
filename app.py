@@ -105,12 +105,37 @@ def delete_farmer(farmer_id):
 CUSTOM_FARMERS = load_custom_farmers()
 PIPELINE = CUSTOM_FARMERS + PIPELINE
 
+# ═══════════════ PIPELINE STATUS OVERRIDES ═══════════════
+# Streamlit re-executes the script on every rerun, so PIPELINE mutations are lost.
+# We track status changes in session_state so they survive reruns.
+if "pipeline_overrides" not in st.session_state:
+    st.session_state.pipeline_overrides = {}
+
+def get_pipeline():
+    """Return PIPELINE with session_state status overrides applied."""
+    result = []
+    for p in PIPELINE:
+        entry = dict(p)
+        if p["name"] in st.session_state.pipeline_overrides:
+            entry["status"] = st.session_state.pipeline_overrides[p["name"]]
+        result.append(entry)
+    return result
+
+def set_pipeline_status(farmer_name, new_status):
+    """Persist a pipeline status change across reruns."""
+    st.session_state.pipeline_overrides[farmer_name] = new_status
+
+def reset_pipeline():
+    """Clear all status overrides (for 'Start New Application')."""
+    st.session_state.pipeline_overrides = {}
+
 # Get current farmer data based on selected_app
 def current_farmer():
     name = st.session_state.get("analyst_app") or st.session_state.get("bank_app")
-    base = PIPELINE[0]  # Default: Erik
+    pl = get_pipeline()
+    base = pl[0]  # Default: first farmer
     if name:
-        for p in PIPELINE:
+        for p in pl:
             if p["name"] == name:
                 base = p; break
     # Override with farmer's own form inputs if available - ONLY for farmer role
@@ -712,9 +737,7 @@ def memo_content(pred, r):
                     st.session_state.memo_sent = True
                     # Update pipeline so everyone sees progress
                     cf = current_farmer()
-                    for p in PIPELINE:
-                        if p["name"] == cf["name"]:
-                            p["status"] = "Sent to Bank"
+                    set_pipeline_status(cf["name"], "Sent to Bank")
                     st.success("Credit package sent to bank!"); st.rerun()
             with c2:
                 if st.button("🔄 Regenerate",use_container_width=True):
@@ -773,9 +796,7 @@ def decision_content():
             # Update pipeline so everyone sees the outcome
             cf = current_farmer()
             new_status = "Approved" if d=="Approve" else ("Approved w/ Cond" if "Conditions" in d else "Rejected")
-            for p in PIPELINE:
-                if p["name"] == cf["name"]:
-                    p["status"] = new_status
+            set_pipeline_status(cf["name"], new_status)
             st.success(f"Decision recorded: **{d}**")
             st.rerun()
     else:
@@ -1067,9 +1088,7 @@ def farmer_wizard():
                 st.session_state.farmer_submitted = True
                 # Update pipeline status so analyst sees it
                 cf = current_farmer()
-                for p in PIPELINE:
-                    if p["name"] == cf["name"]:
-                        p["status"] = "Submitted"
+                set_pipeline_status(cf["name"], "Submitted")
                 st.success("Submitted!"); st.balloons(); time.sleep(1); st.rerun()
 
 def farmer_dashboard():
@@ -1178,6 +1197,7 @@ def farmer_dashboard():
                    'bank_decision','scenario_result','farmer_crop','farmer_ha',
                    'farmer_years','farmer_insurance','farmer_invest','farmer_machinery']:
             if k in st.session_state: del st.session_state[k]
+        reset_pipeline()
         st.rerun()
 
 # ═══════════════ 🏢 CREDIT ANALYST ═══════════════
@@ -1192,15 +1212,16 @@ def analyst_pipeline():
     st.caption("Click a status to filter - then open an application to begin review.")
     st.markdown('<div class="info" style="margin-bottom:1rem;font-size:0.75rem;">🔬 <strong>Demo Mode:</strong> In production, analysts see only their assigned portfolio. All 8 farmers are shown here for demonstration of the full assessment workflow.</div>',unsafe_allow_html=True)
 
-    ready = sum(1 for p in PIPELINE if p["status"]=="Ready")
-    pending = sum(1 for p in PIPELINE if "Pending" in p["status"])
-    review = sum(1 for p in PIPELINE if p["status"]=="Needs Review")
-    submitted = sum(1 for p in PIPELINE if p["status"]=="Submitted")
-    in_progress = sum(1 for p in PIPELINE if p["status"]=="In Progress")
-    sent_to_bank = sum(1 for p in PIPELINE if p["status"]=="Sent to Bank")
-    approved = sum(1 for p in PIPELINE if p["status"] in ("Approved","Approved w/ Cond"))
-    rejected = sum(1 for p in PIPELINE if p["status"]=="Rejected")
-    total = len(PIPELINE)
+    pl = get_pipeline()
+    ready = sum(1 for p in pl if p["status"]=="Ready")
+    pending = sum(1 for p in pl if "Pending" in p["status"])
+    review = sum(1 for p in pl if p["status"]=="Needs Review")
+    submitted = sum(1 for p in pl if p["status"]=="Submitted")
+    in_progress = sum(1 for p in pl if p["status"]=="In Progress")
+    sent_to_bank = sum(1 for p in pl if p["status"]=="Sent to Bank")
+    approved = sum(1 for p in pl if p["status"] in ("Approved","Approved w/ Cond"))
+    rejected = sum(1 for p in pl if p["status"]=="Rejected")
+    total = len(pl)
 
     if "analyst_filter" not in st.session_state: st.session_state.analyst_filter = "Ready"
     af = st.session_state.analyst_filter
@@ -1224,8 +1245,8 @@ def analyst_pipeline():
 
     st.divider()
 
-    if af == "All": filtered = PIPELINE
-    else: filtered = [p for p in PIPELINE if p["status"] == af]
+    if af == "All": filtered = pl
+    else: filtered = [p for p in pl if p["status"] == af]
 
     if not filtered:
         st.info(f"No applications with status: {af}")
@@ -1236,13 +1257,11 @@ def analyst_pipeline():
     memo_sent = st.session_state.memo_sent
     if dec:
         new_status = "Approved" if dec["decision"]=="Approve" else ("Approved w/ Cond" if "Conditions" in dec["decision"] else "Rejected")
-        for p in PIPELINE:
-            if p["name"] == st.session_state.analyst_app:
-                p["status"] = new_status
+        if st.session_state.analyst_app:
+            set_pipeline_status(st.session_state.analyst_app, new_status)
     elif memo_sent:
-        for p in PIPELINE:
-            if p["name"] == st.session_state.analyst_app:
-                p["status"] = "Sent to Bank"
+        if st.session_state.analyst_app:
+            set_pipeline_status(st.session_state.analyst_app, "Sent to Bank")
 
     for p in filtered:
         status = p['status']
@@ -1275,13 +1294,14 @@ def bank_pipeline():
     st.caption("Click a status to filter the list below.")
     st.markdown('<div class="info" style="margin-bottom:1rem;font-size:0.75rem;">🔬 <strong>Demo Mode:</strong> In production, bank officers review only applications escalated to them. All 8 farmers are visible here for demonstration of the decision workflow.</div>',unsafe_allow_html=True)
 
-    total = len(PIPELINE)
-    ready = sum(1 for p in PIPELINE if p["status"]=="Ready")
-    submitted = sum(1 for p in PIPELINE if p["status"]=="Submitted")
-    sent_to_bank = sum(1 for p in PIPELINE if p["status"]=="Sent to Bank")
-    approved = sum(1 for p in PIPELINE if p["status"] in ("Approved","Approved w/ Cond"))
-    in_progress = sum(1 for p in PIPELINE if p["status"] in ("In Progress","Pending Docs","Needs Review"))
-    rejected = sum(1 for p in PIPELINE if p["status"]=="Rejected")
+    pl = get_pipeline()
+    total = len(pl)
+    ready = sum(1 for p in pl if p["status"]=="Ready")
+    submitted = sum(1 for p in pl if p["status"]=="Submitted")
+    sent_to_bank = sum(1 for p in pl if p["status"]=="Sent to Bank")
+    approved = sum(1 for p in pl if p["status"] in ("Approved","Approved w/ Cond"))
+    in_progress = sum(1 for p in pl if p["status"] in ("In Progress","Pending Docs","Needs Review"))
+    rejected = sum(1 for p in pl if p["status"]=="Rejected")
 
     if "bank_filter" not in st.session_state: st.session_state.bank_filter = "Awaiting"
     active_filter = st.session_state.bank_filter
@@ -1308,13 +1328,13 @@ def bank_pipeline():
 
     # Filter pipeline
     if active_filter == "Awaiting":
-        filtered = [p for p in PIPELINE if p["status"] in ("Ready","Submitted","Sent to Bank")]
+        filtered = [p for p in pl if p["status"] in ("Ready","Submitted","Sent to Bank")]
     elif active_filter == "Approved":
-        filtered = [p for p in PIPELINE if p["status"] in ("Approved","Approved w/ Cond")]
+        filtered = [p for p in pl if p["status"] in ("Approved","Approved w/ Cond")]
     elif active_filter == "All":
-        filtered = PIPELINE
+        filtered = pl
     else:
-        filtered = [p for p in PIPELINE if p["status"] == active_filter]
+        filtered = [p for p in pl if p["status"] == active_filter]
 
     if not filtered:
         st.info(f"No applications with status: {active_filter}")
