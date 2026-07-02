@@ -728,7 +728,11 @@ def farmer_wizard():
         with c1:
             if st.button("← Back",use_container_width=True): st.session_state.farmer_step=1;st.rerun()
         with c2:
-            if st.button("Continue →",type="primary",use_container_width=True): st.session_state.farmer_step=3;st.rerun()
+            if missing > 0:
+                st.warning(f"⚠️ {missing} document(s) missing. Cannot proceed without complete documentation.")
+                st.button("Continue →",type="primary",use_container_width=True,disabled=True)
+            else:
+                if st.button("Continue →",type="primary",use_container_width=True): st.session_state.farmer_step=3;st.rerun()
 
     elif step == 3:
         st.markdown("## 🌾 Farm Details")
