@@ -51,16 +51,16 @@ def current_farmer():
         for p in PIPELINE:
             if p["name"] == name:
                 base = p; break
-    # Override with farmer's own form inputs if available
-    result = dict(base)
-    if st.session_state.get("farmer_crop"):
-        result["crop"] = st.session_state.farmer_crop
-    if st.session_state.get("farmer_ha"):
-        result["ha"] = st.session_state.farmer_ha
-    if st.session_state.get("farmer_years"):
-        result["years"] = st.session_state.farmer_years
-    if "farmer_insurance" in st.session_state:
-        result["insurance"] = st.session_state.farmer_insurance
+    # Override with farmer's own form inputs if available — ONLY for farmer role
+    if st.session_state.get("role") == "farmer":
+        if st.session_state.get("farmer_crop"):
+            result["crop"] = st.session_state.farmer_crop
+        if st.session_state.get("farmer_ha"):
+            result["ha"] = st.session_state.farmer_ha
+        if st.session_state.get("farmer_years"):
+            result["years"] = st.session_state.farmer_years
+        if "farmer_insurance" in st.session_state:
+            result["insurance"] = st.session_state.farmer_insurance
     return result
 
 def current_financials():
@@ -97,7 +97,8 @@ def ratios(fin, loans):
     ebitda=f.get("ebitda",f.get("ni",0)+f.get("int",0)+f.get("dep",0))
     ta=max(f.get("ta",1),1); tl=f.get("tl",0); ca=f.get("ca",0); cl=max(f.get("cl",1),1)
     eq=ta-tl; tds=sum(l.get("emi",0)*12 for l in loans); td=sum(l.get("out",0) for l in loans)
-    return {"dti":round(td/rev,4),"dscr":round(ebitda/max(tds,1),2),"wc":ca-cl,"om":round((rev-f.get("opex",0))/rev,4),"ltv":round(td/ta,4),"ac":round(ta/max(td,1),2),"cr":round(ca/cl,2),"dte":round(tl/max(eq,1),4),"cfm":round(f.get("cfo",0)/rev,4),"icr":round(ebitda/max(f.get("int",1),1),2)}
+    dte_raw = round(tl/max(eq,1),4) if eq > 0 else None  # None = negative equity, flag for review
+    return {"dti":round(td/rev,4),"dscr":round(ebitda/max(tds,1),2),"wc":ca-cl,"om":round((rev-f.get("opex",0))/rev,4),"ltv":round(td/ta,4),"ac":round(ta/max(td,1),2),"cr":round(ca/cl,2),"dte":dte_raw or 99.99,"cfm":round(f.get("cfo",0)/rev,4),"icr":round(ebitda/max(f.get("int",1),1),2)}
 
 def predict(fin, loans, farm):
     if not MODEL_OK: return None
@@ -436,7 +437,7 @@ def product_banner(pred, role_label):
             <div style="color:#333;">│</div>
             <div class="banner-item"><div class="bl">Evidence</div><div class="bv">{evid}</div></div>
             <div style="color:#333;">│</div>
-            <div class="banner-item"><div class="bl">AI Confidence</div><div class="bv">{conf}</div></div>
+            <div class="banner-item"><div class="bl">Repay Prob</div><div class="bv">{conf}</div></div>
             <div style="color:#333;">│</div>
             <div class="banner-item"><div class="bl">Recommendation</div><div class="bv" style="color:{rc}">{rec}</div></div>
             <div style="color:#333;">│</div>
@@ -659,6 +660,10 @@ def landing():
 
 # ═══════════════ TOP BAR ═══════════════
 def top_bar(role, label):
+    # Reset scenario state when entering farmer or analyst views
+    if role in ("farmer", "analyst"):
+        st.session_state.sim_drought = 0.23
+        st.session_state.sim_price = 0.018
     c1,c2,c3 = st.columns([1,2,1])
     with c1:
         st.markdown('<span style="font-weight:900;background:linear-gradient(135deg,#f0c060,#d4751a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:1.1rem;">🌱 AgriSense AI</span>',unsafe_allow_html=True)
