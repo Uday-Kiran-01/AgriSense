@@ -56,14 +56,24 @@ PIPELINE = [
 # Get current farmer data based on selected_app
 def current_farmer():
     name = st.session_state.get("analyst_app") or st.session_state.get("bank_app")
+    base = PIPELINE[0]  # Default: Erik
     if name:
         for p in PIPELINE:
             if p["name"] == name:
-                return p
-    return PIPELINE[0]  # Default: Erik
+                base = p; break
+    # Override with farmer's own form inputs if available
+    result = dict(base)
+    if st.session_state.get("farmer_crop"):
+        result["crop"] = st.session_state.farmer_crop
+    if st.session_state.get("farmer_ha"):
+        result["ha"] = st.session_state.farmer_ha
+    if st.session_state.get("farmer_years"):
+        result["years"] = st.session_state.farmer_years
+    if "farmer_insurance" in st.session_state:
+        result["insurance"] = st.session_state.farmer_insurance
+    return result
 
 def current_financials():
-    # Return mock financials scaled based on farm size
     cf = current_farmer()
     scale = cf.get("ha", 85) / 85
     return [{**f, "rev":int(f["rev"]*scale), "opex":int(f["opex"]*scale),
@@ -370,6 +380,7 @@ button:has(div p) {
 for k,v in {
     "role":None,"farmer_step":1,"analyst_app":None,"bank_app":None,"farmer_submitted":False,
     "bank_decision":None,"memo_generated":False,"memo_sent":False,"scenario_result":None,
+    "farmer_crop":None,"farmer_ha":None,"farmer_years":None,"farmer_insurance":True,"farmer_invest":None,
 }.items():
     if k not in st.session_state: st.session_state[k]=v
 
@@ -670,19 +681,27 @@ def farmer_wizard():
         st.markdown("## 🌾 Farm Details")
         c1,c2 = st.columns(2)
         with c1:
-            st.selectbox("Primary Crop",["Hostvete","Varvete","Varkorn","Havre","Hostraps"],index=0)
-            st.number_input("Farm Size (ha)",10,500,85)
-            st.number_input("Years Farming",1,50,18)
+            crop = st.selectbox("Primary Crop",["Hostvete","Varvete","Varkorn","Havre","Hostraps"],index=0)
+            ha = st.number_input("Farm Size (ha)",10,500,85)
+            yrs = st.number_input("Years Farming",1,50,18)
         with c2:
-            st.checkbox("Crop Insurance",True)
-            st.multiselect("Machinery",["Tractor","Harvester","Plow","Seeder","Sprayer"],["Tractor","Harvester","Plow"])
-            st.selectbox("Planning to invest in?",["Tractor","Harvester","Irrigation","Storage","No plans"],index=0)
+            ins = st.checkbox("Crop Insurance",True)
+            machinery = st.multiselect("Machinery",["Tractor","Harvester","Plow","Seeder","Sprayer"],["Tractor","Harvester","Plow"])
+            invest = st.selectbox("Planning to invest in?",["Tractor","Harvester","Irrigation","Storage","No plans"],index=0)
         st.divider()
         c1,c2 = st.columns(2)
         with c1:
             if st.button("← Back ",use_container_width=True): st.session_state.farmer_step=2;st.rerun()
         with c2:
-            if st.button("Analyze →",type="primary",use_container_width=True): st.session_state.farmer_step=4;st.rerun()
+            if st.button("Analyze →",type="primary",use_container_width=True):
+                # Save form values to session state so predictions use them
+                st.session_state.farmer_crop = crop
+                st.session_state.farmer_ha = ha
+                st.session_state.farmer_years = yrs
+                st.session_state.farmer_insurance = ins
+                st.session_state.farmer_machinery = machinery
+                st.session_state.farmer_invest = invest
+                st.session_state.farmer_step=4;st.rerun()
 
     elif step == 4:
         st.markdown("## 🔍 Analyzing...")
