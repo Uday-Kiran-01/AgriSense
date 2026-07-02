@@ -132,6 +132,9 @@ def reset_pipeline():
 # Get current farmer data based on selected_app
 def current_farmer():
     name = st.session_state.get("analyst_app") or st.session_state.get("bank_app")
+    # Farmer role uses farmer_user (set at registration or from landing page)
+    if st.session_state.get("role") == "farmer" and st.session_state.get("farmer_user"):
+        name = st.session_state.farmer_user
     pl = get_pipeline()
     base = pl[0]  # Default: first farmer
     if name:
@@ -501,7 +504,7 @@ for k,v in {
     "role":None,"farmer_step":1,"analyst_app":None,"bank_app":None,"farmer_submitted":False,
     "bank_decision":None,"memo_generated":False,"memo_sent":False,"scenario_result":None,
     "farmer_crop":None,"farmer_ha":None,"farmer_years":None,"farmer_insurance":True,"farmer_invest":None,
-    "sim_drought":0.23,"sim_price":0.018,"registering":False,
+    "sim_drought":0.23,"sim_price":0.018,"registering":False,"farmer_user":None,
 }.items():
     if k not in st.session_state: st.session_state[k]=v
 
@@ -912,9 +915,11 @@ def register_farmer():
                 "insurance": 1 if insurance else 0,
             }
             if save_farmer(farmer):
-                st.success(f"✅ {name.strip()} registered! (ID: {farmer_id})")
+                st.session_state.farmer_user = name.strip()
                 st.session_state.registering = False
-                time.sleep(0.8)
+                st.session_state.role = "farmer"
+                st.success(f"✅ {name.strip()} registered! Switching to Farmer View...")
+                time.sleep(1)
                 st.rerun()
 
 # ═══════════════ LANDING ═══════════════
@@ -922,7 +927,8 @@ def landing():
     st.markdown('<div class="landing"><h1>AgriSense AI</h1><p class="sub">Explainable Decision Support for Agricultural Finance</p><p style="color:#667085;font-size:0.85rem;">Choose your perspective - same application, different view.</p><div class="role-row">',unsafe_allow_html=True)
     c1,c2,c3 = st.columns([1,1,1])
     with c1:
-        st.markdown('<div class="role-btn"><span class="icon">👨‍🌾</span><span class="name">Farmer</span><span class="hint">My application</span></div>',unsafe_allow_html=True)
+        farmer_name = st.session_state.get("farmer_user") or "Erik Johansson"
+        st.markdown(f'<div class="role-btn"><span class="icon">👨‍🌾</span><span class="name">Farmer</span><span class="hint">{farmer_name}</span></div>',unsafe_allow_html=True)
         if st.button("Farmer View",key="lf",use_container_width=True,type="primary"): st.session_state.role="farmer";st.rerun()
     with c2:
         st.markdown('<div class="role-btn"><span class="icon">🏢</span><span class="name">Credit Analyst</span><span class="hint">Review & prepare</span></div>',unsafe_allow_html=True)
@@ -1221,7 +1227,7 @@ def farmer_dashboard():
         for k in ['farmer_submitted','farmer_step','memo_generated','memo_sent',
                    'bank_decision','scenario_result','farmer_crop','farmer_ha',
                    'farmer_years','farmer_insurance','farmer_invest','farmer_machinery',
-                   'farmer_profiles']:
+                   'farmer_profiles','farmer_user']:
             if k in st.session_state: del st.session_state[k]
         reset_pipeline()
         st.rerun()
