@@ -1308,6 +1308,12 @@ def analyst_pipeline():
 
 def analyst_workspace():
     if st.button("← Back to Pipeline"): st.session_state.analyst_app=None;st.rerun()
+    # Auto-set status to In Review when analyst opens a Draft or Submitted application
+    cf = current_farmer()
+    current_status = st.session_state.pipeline_overrides.get(cf["name"], cf.get("status",""))
+    if current_status in ("Draft", "Submitted"):
+        set_pipeline_status(cf["name"], "In Review")
+        st.rerun()
     pred = predict(CFIN(), LOANS, CF()); r = ratios(CFIN(), LOANS)
 
     st.markdown(f"## 📋 {st.session_state.analyst_app}")
