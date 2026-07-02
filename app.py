@@ -138,18 +138,27 @@ def current_farmer():
         for p in pl:
             if p["name"] == name:
                 base = p; break
-    # Override with farmer's own form inputs if available - ONLY for farmer role
     result = dict(base)
-    if st.session_state.get("role") == "farmer":
-        if st.session_state.get("farmer_crop"):
-            result["crop"] = st.session_state.farmer_crop
-        if st.session_state.get("farmer_ha"):
-            result["ha"] = st.session_state.farmer_ha
-        if st.session_state.get("farmer_years"):
-            result["years"] = st.session_state.farmer_years
-        if "farmer_insurance" in st.session_state:
-            result["insurance"] = st.session_state.farmer_insurance
+    # Apply farmer form overrides for ALL roles (stored per farmer in session_state)
+    profiles = st.session_state.get("farmer_profiles", {})
+    override = profiles.get(result["name"], {})
+    if override.get("crop"):
+        result["crop"] = override["crop"]
+    if override.get("ha"):
+        result["ha"] = override["ha"]
+    if override.get("years"):
+        result["years"] = override["years"]
+    if "insurance" in override:
+        result["insurance"] = override["insurance"]
     return result
+
+def save_farmer_profile(farmer_name, crop, ha, years, insurance):
+    """Persist farmer form inputs so analyst/bank see the actual submitted values."""
+    if "farmer_profiles" not in st.session_state:
+        st.session_state.farmer_profiles = {}
+    st.session_state.farmer_profiles[farmer_name] = {
+        "crop": crop, "ha": ha, "years": years, "insurance": insurance,
+    }
 
 def current_financials():
     cf = current_farmer()
@@ -1031,6 +1040,9 @@ def farmer_wizard():
                 st.session_state.farmer_insurance = ins
                 st.session_state.farmer_machinery = machinery
                 st.session_state.farmer_invest = invest
+                # Persist so analyst/bank see the farmer's actual inputs
+                cf = current_farmer()
+                save_farmer_profile(cf["name"], crop, ha, yrs, ins)
                 st.session_state.farmer_step=4;st.rerun()
 
     elif step == 4:
@@ -1195,7 +1207,8 @@ def farmer_dashboard():
     if st.button("🔄 Start New Application", use_container_width=True):
         for k in ['farmer_submitted','farmer_step','memo_generated','memo_sent',
                    'bank_decision','scenario_result','farmer_crop','farmer_ha',
-                   'farmer_years','farmer_insurance','farmer_invest','farmer_machinery']:
+                   'farmer_years','farmer_insurance','farmer_invest','farmer_machinery',
+                   'farmer_profiles']:
             if k in st.session_state: del st.session_state[k]
         reset_pipeline()
         st.rerun()
