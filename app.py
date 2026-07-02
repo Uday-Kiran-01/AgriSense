@@ -65,11 +65,26 @@ def current_farmer():
 
 def current_financials():
     cf = current_farmer()
-    scale = cf.get("ha", 85) / 85
-    return [{**f, "rev":int(f["rev"]*scale), "opex":int(f["opex"]*scale),
-             "ni":int(f["ni"]*scale), "ta":int(f["ta"]*scale), "tl":int(f["tl"]*scale),
-             "ca":int(f["ca"]*scale), "cl":int(f["cl"]*scale),
-             "ebitda":int(f["ebitda"]*scale), "cfo":int(f["cfo"]*scale)} for f in FIN]
+    ha_scale = cf.get("ha", 85) / 85
+    # Adjust for farmer's actual DSCR vs Erik's baseline (1.32)
+    target_dscr = cf.get("dscr", 1.32)
+    dscr_ratio = 1.32 / max(target_dscr, 0.3)  # >1 means riskier, <1 means safer
+    result = []
+    for f in FIN:
+        adj = dict(f)
+        adj["rev"] = int(f["rev"] * ha_scale)
+        adj["opex"] = int(f["opex"] * ha_scale * (1 + (dscr_ratio - 1) * 0.6))
+        adj["int"] = int(f["int"] * ha_scale * dscr_ratio)
+        adj["dep"] = int(f["dep"] * ha_scale)
+        adj["ni"] = adj["rev"] - adj["opex"] - adj["int"] - adj["dep"]
+        adj["ta"] = int(f["ta"] * ha_scale)
+        adj["tl"] = int(f["tl"] * ha_scale * dscr_ratio)
+        adj["ca"] = int(f["ca"] * ha_scale)
+        adj["cl"] = int(f["cl"] * ha_scale)
+        adj["ebitda"] = adj["ni"] + adj["int"] + adj["dep"]
+        adj["cfo"] = int(adj["ebitda"] * 0.7)
+        result.append(adj)
+    return result
 
 # Shortcuts for current farmer/financials
 def CF(): return current_farmer()
@@ -403,7 +418,7 @@ def product_banner(pred, role_label):
     rc = "#34d399" if pred and pred["level"]=="Low" else "#fbbf24" if pred and pred["level"]=="Medium" else "#f87171"
     rec = "Proceed" if pred and pred["level"]=="Low" else "Proceed with Conditions" if pred and pred["level"]=="Medium" else "Manual Review"
     conf = f"{pred['repay']:.0%}" if pred else "N/A"
-    evid = "94%"  # Could be computed from document completeness in production
+    evid = f"{cf.get('score',87)}%"  # Uses farmer's score as evidence completeness
 
     dec = st.session_state.bank_decision
     if dec:
@@ -435,13 +450,13 @@ def timeline(pred, r, expanded_sections):
     """Render the 8-step application journey timeline."""
     steps = [
         (1, "Documents", "documents", "✅ Verified", True,
-         lambda: st.markdown("✅ Bank Statements · ✅ Tax Returns · ✅ Land Registry · ✅ Loans · ⚠️ Machinery · ✅ Insurance\n\nReliability: **94%**")),
+         lambda: st.markdown(f"✅ Bank Statements · ✅ Tax Returns · ✅ Land Registry · ✅ Loans · ⚠️ Machinery · ✅ Insurance\n\nReliability: **{CF().get('score',87)}%**")),
         (2, "Validation", "validation", "✅ Passed", True,
          lambda: st.markdown("All documents validated. Currency standardized to SEK. Area converted to hectares. No critical issues.")),
         (3, "Financial Analysis", "financials", "✅ Complete", True,
          lambda: financial_content(r, pred)),
         (4, "External Intelligence", "external", "✅ Live", True,
-         lambda: st.markdown("🌦️ Weather: Normal (Skane)  ·  📉 Wheat: 2.48 kr/kg (-1.8%)  ·  🦠 Disease Risk: Low  ·  💶 EU CAP: 115,000 kr")),
+         lambda: st.markdown(f"🌦️ Weather: Normal ({CF().get('region','Skane')})  ·  📉 Wheat: 2.48 kr/kg (-1.8%)  ·  🦠 Disease Risk: Low  ·  💶 EU CAP: 115,000 kr")),
         (5, "AI Assessment", "ai", "✅ Complete", True,
          lambda: ai_content(pred)),
         (6, "Scenario Simulation", "scenario", "⚡ Run", False,
@@ -698,8 +713,16 @@ def farmer_wizard():
         st.markdown("## 📄 Documents")
         st.caption("We need these to assess your application.")
         st.checkbox("Use demo documents (Erik Johansson)",True,disabled=True)
-        for d in ["Bank Statement (2024)","Tax Returns (2022-24)","Land Registry","Existing Loans","Machinery Inventory","Crop Insurance"]:
-            st.markdown(f'<div class="card-sm">✅ <strong style="color:#e8ecf1">{d}</strong> <small style="color:#667085">- Uploaded</small></div>',unsafe_allow_html=True)
+        # Vary docs based on farmer score
+        cf = current_farmer()
+        score = cf.get("score", 87)
+        all_docs = ["Bank Statement (2024)","Tax Returns (2022-24)","Land Registry","Existing Loans","Machinery Inventory","Crop Insurance"]
+        missing = 0 if score >= 80 else 1 if score >= 60 else 2
+        for i, d in enumerate(all_docs):
+            if i < len(all_docs) - missing:
+                st.markdown(f'<div class="card-sm">✅ <strong style="color:#e8ecf1">{d}</strong> <small style="color:#667085">- Uploaded</small></div>',unsafe_allow_html=True)
+            else:
+                st.markdown(f'<div class="card-sm">⚠️ <strong style="color:#fbbf24">{d}</strong> <small style="color:#667085">- Missing</small></div>',unsafe_allow_html=True)
         st.divider()
         c1,c2 = st.columns(2)
         with c1:
