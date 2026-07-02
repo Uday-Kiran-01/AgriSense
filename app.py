@@ -616,22 +616,26 @@ def financial_content(r, pred):
     cf = CF()
     st.caption(f"{cf['name']} · {cf.get('ha',85)} ha {cf.get('crop','Hostvete')} · {cf.get('years',18)} yrs")
 
-    def ratio_card(label, value, threshold_good, threshold_warn):
-        c = "#34d399" if value >= threshold_good else "#fbbf24" if value >= threshold_warn else "#f87171"
-        return f'<span style="color:{c};font-weight:700;">{value}</span> <small style="color:#667085;">{label}</small>'
+    def ratio_card(label, value, suffix, threshold_good, threshold_warn, invert=False):
+        """invert=True means lower is better (DTI, LTV, D/E)."""
+        if invert:
+            c = "#34d399" if value <= threshold_good else "#fbbf24" if value <= threshold_warn else "#f87171"
+        else:
+            c = "#34d399" if value >= threshold_good else "#fbbf24" if value >= threshold_warn else "#f87171"
+        return f'<span style="color:{c};font-weight:700;">{value:{suffix}}</span> <small style="color:#667085;">{label}</small>'
 
     dscr = r.get("dscr",0); dti = r.get("dti",0); om = r.get("om",0); ltv = r.get("ltv",0)
     cr = r.get("cr",0); icr = r.get("icr",0); dte = r.get("dte",0); cfm = r.get("cfm",0)
 
     cols = st.columns(8)
-    with cols[0]: st.markdown(ratio_card("DSCR", f"{dscr:.2f}x", 1.5, 1.0), unsafe_allow_html=True)
-    with cols[1]: st.markdown(ratio_card("DTI", f"{dti:.1%}", 0.35, 0.50), unsafe_allow_html=True)
-    with cols[2]: st.markdown(ratio_card("OM", f"{om:.1%}", 0.25, 0.15), unsafe_allow_html=True)
-    with cols[3]: st.markdown(ratio_card("LTV", f"{ltv:.1%}", 0.50, 0.70), unsafe_allow_html=True)
-    with cols[4]: st.markdown(ratio_card("CR", f"{cr:.2f}x", 1.5, 1.0), unsafe_allow_html=True)
-    with cols[5]: st.markdown(ratio_card("ICR", f"{icr:.2f}x", 3.0, 1.5), unsafe_allow_html=True)
-    with cols[6]: st.markdown(ratio_card("D/E", f"{dte:.2f}x", 2.0, 4.0), unsafe_allow_html=True)
-    with cols[7]: st.markdown(ratio_card("CFM", f"{cfm:.1%}", 0.15, 0.05), unsafe_allow_html=True)
+    with cols[0]: st.markdown(ratio_card("DSCR", dscr, ".2f", 1.5, 1.0), unsafe_allow_html=True)
+    with cols[1]: st.markdown(ratio_card("DTI", dti, ".1%", 0.35, 0.50, invert=True), unsafe_allow_html=True)
+    with cols[2]: st.markdown(ratio_card("OM", om, ".1%", 0.25, 0.15), unsafe_allow_html=True)
+    with cols[3]: st.markdown(ratio_card("LTV", ltv, ".1%", 0.50, 0.70, invert=True), unsafe_allow_html=True)
+    with cols[4]: st.markdown(ratio_card("CR", cr, ".2f", 1.5, 1.0), unsafe_allow_html=True)
+    with cols[5]: st.markdown(ratio_card("ICR", icr, ".2f", 3.0, 1.5), unsafe_allow_html=True)
+    with cols[6]: st.markdown(ratio_card("D/E", dte, ".2f", 2.0, 4.0, invert=True), unsafe_allow_html=True)
+    with cols[7]: st.markdown(ratio_card("CFM", cfm, ".1%", 0.15, 0.05), unsafe_allow_html=True)
 
 def external_content(r=None, pred=None):
     cf = CF()
