@@ -600,7 +600,7 @@ def timeline(pred, r, expanded_sections):
 
         # Clickable header
         arrow = "▼" if is_expanded else "▶"
-        if st.button(f"{arrow} {title} — {status}", key=f"tl_{key}",
+        if st.button(f"{arrow} {title} - {status}", key=f"tl_{key}",
                      use_container_width=True,
                      type="secondary"):
             if key in st.session_state.timeline_expanded:
@@ -851,7 +851,7 @@ def register_farmer():
             for cf in CUSTOM_FARMERS:
                 c1,c2 = st.columns([4,1])
                 with c1:
-                    st.markdown(f"**{cf['name']}** — {cf['district']}, {cf['region']} · {cf['ha']} ha {cf['crop']} · Score {cf['score']}% · DSCR {cf['dscr']}")
+                    st.markdown(f"**{cf['name']}** - {cf['district']}, {cf['region']} · {cf['ha']} ha {cf['crop']} · Score {cf['score']}% · DSCR {cf['dscr']}")
                 with c2:
                     if st.button("🗑️ Remove", key=f"del_{cf['id']}"):
                         delete_farmer(cf['id'])
