@@ -19,7 +19,7 @@ jobs:
 
       - name: Deploy to HuggingFace
         env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_TOKEN: ${{ secrets.AgriSense }}
         run: |
           python -c "
           from huggingface_hub import HfApi
