@@ -7,7 +7,7 @@
 **Repository:** [github.com/Uday-Kiran-01/AgriSense](https://github.com/Uday-Kiran-01/AgriSense)  
 **Live Demo:** [huggingface.co/spaces/SuperNitro/Agri-Sense](https://huggingface.co/spaces/SuperNitro/Agri-Sense)  
 
-> **Note:** The HF Spaces demo is a **standalone Streamlit app** (`app.py`, ~1400 lines) with the ML model embedded directly via joblib. It has no backend dependency — all computation happens client-side. The Full-Stack Backend section below documents the optional production backend (FastAPI, SHAP, Gemini, external APIs) which is available in the `Agri-Sense/` directory but not required for the demo. The standalone app includes: 8-tab single-page UI, SQLite farmer persistence, session-state pipeline management, real-time ML predictions, scenario simulation, and memo generation — all from local data.
+> **Note:** The HF Spaces demo is a **standalone Streamlit app** (`app.py`, ~1400 lines) with the ML model embedded directly via joblib. It has no backend dependency - all computation happens client-side. The Full-Stack Backend section below documents the optional production backend (FastAPI, SHAP, Gemini, external APIs) which is available in the `Agri-Sense/` directory but not required for the demo. The standalone app includes: 8-tab single-page UI, SQLite farmer persistence, session-state pipeline management, real-time ML predictions, scenario simulation, and memo generation - all from local data.
 
 ---
 
@@ -38,7 +38,7 @@ Every component is independently replaceable. Today the system uses mock bank AP
 
 ### Human-in-the-Loop
 
-The AI never approves loans. It prepares evidence: financial ratios, risk estimates, scenario impacts, and a structured decision memo. In the production backend, SHAP explanations and Gemini AI summaries provide additional explainability layers. A human credit analyst reviews the package. A human bank officer makes the final decision. This is not a limitation — it is the design.
+The AI never approves loans. It prepares evidence: financial ratios, risk estimates, scenario impacts, and a structured decision memo. In the production backend, SHAP explanations and Gemini AI summaries provide additional explainability layers. A human credit analyst reviews the package. A human bank officer makes the final decision. This is not a limitation - it is the design.
 
 ### Data Quality Before Modelling
 
@@ -277,8 +277,8 @@ graph TB
 | Deterministic ratios + ML | Separation of auditable calculations from statistical inference |
 | Synthetic Data | GDPR-safe demonstration without real farmers |
 | Three separate models | Independent retraining, versioning, and explanation |
-| SHAP (backend only) | Per-prediction feature contributions — available in production backend |
-| Gemini AI (backend only) | Natural-language explanations — available in production backend |
+| SHAP (backend only) | Per-prediction feature contributions - available in production backend |
+| Gemini AI (backend only) | Natural-language explanations - available in production backend |
 
 ---
 
@@ -298,11 +298,11 @@ In production, these would be three separate deployments with authentication. In
 
 ### 10.2 Farmer Wizard (5 Steps)
 
-1. **Welcome** — Shows farm size, experience, region, machinery, investment plans
-2. **Documents** — Score-based document readiness check (score ≥ 80: all docs present; score < 60: 2 missing). Missing documents block progression.
-3. **Farm Details** — Crop type (5 options), hectares, years farming, crop insurance, machinery, investment plans. All values remembered on Edit.
-4. **Analysis** — Animated progress through 5 stages (checking docs → extracting financials → weather → ML → report)
-5. **Results** — DSCR/DTI-based cards, improvement suggestions, Submit button
+1. **Welcome** - Shows farm size, experience, region, machinery, investment plans
+2. **Documents** - Score-based document readiness check (score ≥ 80: all docs present; score < 60: 2 missing). Missing documents block progression.
+3. **Farm Details** - Crop type (5 options), hectares, years farming, crop insurance, machinery, investment plans. All values remembered on Edit.
+4. **Analysis** - Animated progress through 5 stages (checking docs → extracting financials → weather → ML → report)
+5. **Results** - DSCR/DTI-based cards, improvement suggestions, Submit button
 
 ### 10.3 Session State Architecture
 
@@ -317,23 +317,23 @@ Streamlit re-executes the entire script on every interaction. Five session_state
 | Workflow flags | `memo_generated`, `memo_sent`, `bank_decision` | Progress through the review pipeline |
 
 Key functions:
-- `get_pipeline()` — merges `pipeline_overrides` into the base PIPELINE list
-- `save_farmer_profile()` — persists farmer form inputs for cross-role visibility
-- `current_farmer()` — returns the active farmer with profiles applied regardless of role
-- `reset_pipeline()` — clears all overrides on "Start New Application"
+- `get_pipeline()` - merges `pipeline_overrides` into the base PIPELINE list
+- `save_farmer_profile()` - persists farmer form inputs for cross-role visibility
+- `current_farmer()` - returns the active farmer with profiles applied regardless of role
+- `reset_pipeline()` - clears all overrides on "Start New Application"
 
 ### 10.4 Tab-Based Timeline
 
 The analyst and bank workspaces present 8 assessment steps as tabs:
 
-1. **📄 Docs** — Document list with reliability score
-2. **🔍 Validation** — Currency, area, format validation summary
-3. **📊 Financials** — All 10 ratios color-coded (green/yellow/red) in a single row
-4. **🌍 External** — Weather, commodity prices, EU CAP subsidy, seasonal cash flow chart
-5. **🤖 AI** — Risk %, repayment probability, risk level from Random Forest
-6. **🎯 Scenario** — "Buy Tractor" simulation: re-runs predict() with modified drought/price
-7. **📋 Memo** — Generated credit assessment with all computed figures; Send to Bank action
-8. **⚖️ Decision** — Approve / Approve with Conditions / Reject with required notes
+1. **📄 Docs** - Document list with reliability score
+2. **🔍 Validation** - Currency, area, format validation summary
+3. **📊 Financials** - All 10 ratios color-coded (green/yellow/red) in a single row
+4. **🌍 External** - Weather, commodity prices, EU CAP subsidy, seasonal cash flow chart
+5. **🤖 AI** - Risk %, repayment probability, risk level from Random Forest
+6. **🎯 Scenario** - "Buy Tractor" simulation: re-runs predict() with modified drought/price
+7. **📋 Memo** - Generated credit assessment with all computed figures; Send to Bank action
+8. **⚖️ Decision** - Approve / Approve with Conditions / Reject with required notes
 
 This replaced the earlier vertical expand/collapse design to fit all content on a single page without scrolling.
 
@@ -364,7 +364,7 @@ Both the farmer dashboard and the analyst timeline include scenario simulation:
 
 - **Farmer:** "Planning to invest in a tractor?" radio with three options, each modifying `sim_drought` and `sim_price` in session_state, then re-running `predict()` to show risk impact
 - **Analyst:** Same mechanism in the Scenario tab, showing risk delta with the baseline
-- Uses the same `predict()` function — real ML re-prediction, not template text
+- Uses the same `predict()` function - real ML re-prediction, not template text
 
 ### 10.8 CI/CD Pipeline
 
@@ -375,7 +375,7 @@ A GitHub Actions workflow (`.github/workflows/deploy.yml`) auto-deploys to HF Sp
 - **Steps:** Checkout → Install `huggingface_hub` → Upload `app.py`, `config.toml`, `requirements.txt` to HF Spaces
 - **Auth:** HF token stored as GitHub Actions secret
 - **Deploy time:** ~30 seconds
-- **Model bundle:** Stored directly on HF Spaces (9.7 MB, rarely changes — excluded from CI/CD to keep deploys fast)
+- **Model bundle:** Stored directly on HF Spaces (9.7 MB, rarely changes - excluded from CI/CD to keep deploys fast)
 
 ---
 
