@@ -3,30 +3,24 @@ name: Deploy to HF Spaces
 on:
   push:
     branches: [master]
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: Install HF Hub
-        run: pip install huggingface_hub
+      - uses: actions/checkout@v4
 
       - name: Deploy to HuggingFace
         env:
           HF_TOKEN: ${{ secrets.AgriSense }}
         run: |
+          pip install huggingface_hub
           python -c "
           from huggingface_hub import HfApi
           api = HfApi()
           api.upload_file('app.py', path_in_repo='app.py', repo_id='SuperNitro/Agri-Sense', repo_type='space')
           api.upload_file('requirements.txt', path_in_repo='requirements.txt', repo_id='SuperNitro/Agri-Sense', repo_type='space')
           api.upload_file('.streamlit/config.toml', path_in_repo='.streamlit/config.toml', repo_id='SuperNitro/Agri-Sense', repo_type='space')
-          api.upload_file('agrisense_model_bundle.pkl', path_in_repo='agrisense_model_bundle.pkl', repo_id='SuperNitro/Agri-Sense', repo_type='space')
           print('Deployed!')
           "
