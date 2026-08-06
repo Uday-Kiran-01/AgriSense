@@ -2,119 +2,107 @@
 
 **Explainable Decision Support for Agricultural Lending**
 
-Live demo: [huggingface.co/spaces/SuperNitro/Agri-Sense](https://huggingface.co/spaces/SuperNitro/Agri-Sense)
+[![Live Demo](https://img.shields.io/badge/demo-HF%20Spaces-blue)](https://huggingface.co/spaces/SuperNitro/Agri-Sense)
+[![CI/CD](https://img.shields.io/badge/deploy-GitHub%20Actions-green)](https://github.com/Uday-Kiran-01/AgriSense/actions)
 
 ---
 
-AgriSense AI combines financial, operational, and environmental data into a transparent lending workflow. It never approves loans — it prepares evidence for humans who do.
+AgriSense AI combines financial data, operational records, and environmental signals into a transparent agricultural lending workflow. It never approves loans - it prepares evidence for humans who do.
 
-> 🇸🇪 Swedish demo · Synthetic data · SEK currency · GDPR compliant · 8 demo farmers · 11 regions
+> 🇸🇪 Swedish demo · Synthetic data · SEK · GDPR compliant · 8 demo farmers
 
 ---
 
-## What It Does
+## The Workflow
 
-| Role | Workflow |
-|------|----------|
-| 👨‍🌾 **Farmer** | 5-step wizard → Submit to Credit Analyst → Track status → See bank decision |
-| 🏢 **Credit Analyst** | Pipeline with filters → 7-tab review workspace → Financial ratios → Scenario sim → Memo → Send to Bank |
-| 🏦 **Bank Officer** | Pipeline → 8-tab workspace with Decision tab → Approve / Conditions / Reject |
+Three roles. One application. The full lending lifecycle.
+
+| Role | What they see | What they do |
+|------|-------------|-------------|
+| 👨‍🌾 **Farmer** | Their application only | 5-step wizard → Submit → Track status → See decision |
+| 🏢 **Credit Analyst** | All submitted applications | Filter pipeline → Review ratios → Run scenarios → Generate memo → Send to bank |
+| 🏦 **Bank Officer** | Applications escalated to them | Review full package → Approve / Conditions / Reject |
 
 **Pipeline:** Draft → Submitted → In Review → Sent to Bank → Approved/Rejected
 
 ---
 
-## Architecture
+## How It Works
 
-Standalone Streamlit app (`app.py`, ~1,400 lines) — no backend required for the demo.
+A standalone Streamlit app with the ML model embedded directly.
 
 ```
-Farmer/Analyst/Bank → Streamlit UI → Embedded ML (RF×3 via joblib) → SQLite farmers
-                                      ↓
-                              session_state (pipeline overrides, farmer profiles)
+Farmer enters crop, hectares, insurance
+        ↓
+current_financials() - scales baseline by farmer inputs
+        ↓
+ratios() - 10 standard financial formulas (DSCR, DTI, OM, LTV, etc.)
+        ↓
+predict() - 15 features → Random Forest × 3 → risk%, repay%, capacity
+        ↓
+Memo - computed from actual ratios and predictions
+        ↓
+Bank officer makes the final call
 ```
 
-- **8-tab timeline** (7 for analyst, 8 for bank) — single-page layout
-- **SQLite persistence** — custom farmers survive restarts
-- **session_state** — status overrides + farmer profiles survive Streamlit reruns
+The analyst workspace has a 7-tab view (8 for bank with the Decision tab). Everything fits on one page - no scrolling between sections.
 
 ---
 
-## ML Approach
+## ML Performance
 
-**Random Forest × 3** — embedded via `agrisense_model_bundle.pkl` (9.7 MB joblib).
-
-| Principle | Implementation |
-|-----------|---------------|
-| Deterministic + ML | 10 financial ratios computed from formulas, ML for risk estimation |
-| Honest evaluation | 1,000 unseen farmers, 5 stress scenarios |
-| Human-in-the-loop | AI prepares evidence — humans decide |
-
-**Evaluation (1,000 unseen farmers, shifted distributions):**
+Random Forest × 3 on 15 engineered features. Evaluated on 1,000 unseen farmers with shifted distributions.
 
 | Metric | Value |
 |--------|-------|
 | Accuracy | 80.1% |
 | Precision | 99.4% |
-| Recall | 70.9% |
-| F1 | 82.8% |
 | ROC-AUC | 90.0% |
+
+Drought Index is the top feature at 28.6% importance - weather dominates financial ratios. This means drought insurance and irrigation investment become quantitative lending factors, not just qualitative ones.
+
+---
+
+## Running It
+
+```bash
+# Option 1: Local
+git clone https://github.com/Uday-Kiran-01/AgriSense.git
+cd Agri-Sense && pip install -r requirements.txt && streamlit run app.py
+
+# Option 2: Docker
+docker compose up
+```
+
+---
+
+## Deploying
+
+Every `git push` to `main` triggers a GitHub Actions workflow that auto-deploys to HF Spaces. The pipeline uploads `app.py`, `requirements.txt`, `.streamlit/config.toml`, and `agrisense_model_bundle.pkl`. Deploy time: ~30 seconds.
 
 ---
 
 ## Tech Stack
 
-| Layer | Tech |
-|-------|------|
+| Layer | Technology |
+|-------|-----------|
 | Frontend | Streamlit 1.36 |
-| ML | scikit-learn Random Forest × 3 |
-| Storage | SQLite (built-in) |
-| State | st.session_state overrides |
-| Deployment | HuggingFace Spaces · GitHub |
-| Backend (future) | FastAPI + SHAP + Gemini |
-
----
-
-## Quick Start
-
-```bash
-git clone https://github.com/Uday-Kiran-01/AgriSense.git
-cd Agri-Sense
-pip install -r requirements.txt
-streamlit run app.py
-```
+| ML | scikit-learn Random Forest × 3 (joblib) |
+| Storage | SQLite for custom farmer persistence |
+| State | st.session_state overrides (survive Streamlit reruns) |
+| CI/CD | GitHub Actions → HF Spaces |
+| Container | Docker + Docker Compose |
+| Backend (prod) | FastAPI + SHAP + Gemini (available in repo) |
 
 ---
 
 ## Docs
 
-- [Technical Write-up](docs/technical-writeup.md) — 12-section engineering document
-- [Architecture Overview](docs/architecture.md) — Mermaid diagrams
-
-| Scenario | Risk Shift |
-| Deployment | HuggingFace Spaces · GitHub |
-| Backend (future) | FastAPI + SHAP + Gemini |
-
----
-
-## Quick Start
-
-```bash
-git clone https://github.com/Uday-Kiran-01/AgriSense.git
-cd Agri-Sense
-pip install -r requirements.txt
-streamlit run app.py
-```
-
----
-
-## Docs
-
-- [Technical Write-up](docs/technical-writeup.md) — 12-page engineering document
-- [Architecture Overview](docs/architecture.md) — Mermaid diagrams
+- [Technical Write-up](docs/technical-writeup.md) - 12-section engineering document covering design, ML, evaluation, and implementation
+- [Architecture Overview](docs/architecture.md) - System architecture with Mermaid diagrams
 
 ---
 
 ## License
 
-MIT · Advisory only — final lending decisions made by qualified humans.
+MIT · Advisory only - final lending decisions made by qualified humans.
