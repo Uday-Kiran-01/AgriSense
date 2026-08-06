@@ -18,8 +18,12 @@ def load_model():
     p = Path(__file__).resolve().parent / "agrisense_model_bundle.pkl"
     if p.exists(): return joblib.load(p)
     return None
-bundle = load_model()
-MODEL_OK = bundle is not None
+
+def get_bundle():
+    """Lazy-load model on first use, not at import time."""
+    return load_model()
+
+MODEL_OK = Path(__file__).resolve().parent.joinpath("agrisense_model_bundle.pkl").exists()
 
 # ═══════════════ DATA ═══════════════
 APP_ID = "AG-2026-0001"
@@ -207,6 +211,8 @@ def ratios(fin, loans):
 
 def predict(fin, loans, farm):
     if not MODEL_OK: return None
+    bundle = get_bundle()
+    if not bundle: return None
     r=ratios(fin, loans)
     on_t=sum(l.get("on_time",0) for l in loans); due=max(sum(l.get("due",1) for l in loans),1)
     # Use session drought/price if set (from scenario), otherwise defaults
