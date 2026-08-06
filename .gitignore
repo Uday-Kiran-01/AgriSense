@@ -7,14 +7,23 @@ build/
 *.egg
 .eggs/
 
+# Database (auto-created on first run)
+*.db
+
 # Virtual environment
 venv/
 .venv/
 env/
+myvenu/
+myvenu/
+venv/
+.venv/
+>>>>>>> origin/master
 
 # IDE
 .idea/
 .vscode/
+<<<<<<< HEAD
 *.swp
 *.swo
 
@@ -26,10 +35,13 @@ data/logs/*.log
 # Environment
 .env
 !.env.example
+=======
+>>>>>>> origin/master
 
 # OS
 .DS_Store
 Thumbs.db
+<<<<<<< HEAD
 
 # Jupyter
 .ipynb_checkpoints/
@@ -39,3 +51,5 @@ Thumbs.db
 
 # Hugging Face
 .hf/
+=======
+>>>>>>> origin/master

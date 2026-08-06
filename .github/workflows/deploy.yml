@@ -1,0 +1,26 @@
+name: Deploy to HF Spaces
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to HuggingFace
+        env:
+          HF_TOKEN: ${{ secrets.AgriSense }}
+        run: |
+          pip install huggingface_hub
+          python -c "
+          from huggingface_hub import HfApi
+          api = HfApi()
+          api.upload_file(path_or_fileobj='app.py', path_in_repo='app.py', repo_id='SuperNitro/Agri-Sense', repo_type='space')
+          api.upload_file(path_or_fileobj='requirements.txt', path_in_repo='requirements.txt', repo_id='SuperNitro/Agri-Sense', repo_type='space')
+          api.upload_file(path_or_fileobj='.streamlit/config.toml', path_in_repo='.streamlit/config.toml', repo_id='SuperNitro/Agri-Sense', repo_type='space')
+          print('Deployed!')
+          "
