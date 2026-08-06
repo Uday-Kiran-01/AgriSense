@@ -22,5 +22,6 @@ jobs:
           api.upload_file(path_or_fileobj='app.py', path_in_repo='app.py', repo_id='SuperNitro/Agri-Sense', repo_type='space')
           api.upload_file(path_or_fileobj='requirements.txt', path_in_repo='requirements.txt', repo_id='SuperNitro/Agri-Sense', repo_type='space')
           api.upload_file(path_or_fileobj='.streamlit/config.toml', path_in_repo='.streamlit/config.toml', repo_id='SuperNitro/Agri-Sense', repo_type='space')
+          api.upload_file(path_or_fileobj='agrisense_model_bundle.pkl', path_in_repo='agrisense_model_bundle.pkl', repo_id='SuperNitro/Agri-Sense', repo_type='space')
           print('Deployed!')
           "
