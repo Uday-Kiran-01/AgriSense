@@ -5,13 +5,9 @@ services:
   app:
     build: .
     ports:
-      - "8000:8000"   # FastAPI
-      - "8501:8501"   # Streamlit
+      - "8501:8501"
     environment:
-      - DATABASE_URL=sqlite:///./data/agrisense.db
-      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-      - LOG_LEVEL=INFO
+      - STREAMLIT_SERVER_PORT=8501
     volumes:
-      - ./data:/app/data
-      - ./.env:/app/.env:ro
+      - ./agrisense_farmers.db:/app/agrisense_farmers.db
     restart: unless-stopped
