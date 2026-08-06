@@ -91,18 +91,30 @@ flowchart TB
 
 ```mermaid
 flowchart TB
+    subgraph Dev["💻 Development"]
+        Code["git push origin master"]
+    end
+    subgraph CI["⚙️ GitHub Actions"]
+        Action["deploy.yml<br/>on: push to master"]
+        Checkout["Checkout code"]
+        Upload["Upload to HF Spaces"]
+    end
     subgraph Cloud["☁️ Cloud"]
         C1["HF Spaces<br/>SuperNitro/Agri-Sense"]
         C2["GitHub<br/>Uday-Kiran-01/AgriSense"]
     end
-    subgraph Files["📦 Required Files"]
+    subgraph Files["📦 Deployed Files"]
         F1["app.py"]
-        F2["agrisense_model_bundle.pkl"]
+        F2["config.toml"]
         F3["requirements.txt"]
     end
+    Code --> Action
+    Action --> Checkout --> Upload --> C1
+    C2 --> Code
     Files --> C1
-    C2 --> C1
 ```
+
+**CI/CD:** Every `git push` to master triggers a GitHub Actions workflow that auto-deploys `app.py`, `.streamlit/config.toml`, and `requirements.txt` to HF Spaces. The model bundle (`agrisense_model_bundle.pkl`) is stored directly on HF Spaces since it rarely changes. Deploy time: ~30 seconds.
 
 ---
 

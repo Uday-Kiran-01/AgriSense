@@ -366,6 +366,17 @@ Both the farmer dashboard and the analyst timeline include scenario simulation:
 - **Analyst:** Same mechanism in the Scenario tab, showing risk delta with the baseline
 - Uses the same `predict()` function — real ML re-prediction, not template text
 
+### 10.8 CI/CD Pipeline
+
+A GitHub Actions workflow (`.github/workflows/deploy.yml`) auto-deploys to HF Spaces on every push to master:
+
+- **Trigger:** `git push` to `master` branch
+- **Runner:** Ubuntu latest (free tier)
+- **Steps:** Checkout → Install `huggingface_hub` → Upload `app.py`, `config.toml`, `requirements.txt` to HF Spaces
+- **Auth:** HF token stored as GitHub Actions secret
+- **Deploy time:** ~30 seconds
+- **Model bundle:** Stored directly on HF Spaces (9.7 MB, rarely changes — excluded from CI/CD to keep deploys fast)
+
 ---
 
 ## 11. Lessons Learned
