@@ -9,6 +9,8 @@ import numpy as np
 import joblib, time, sqlite3, json
 from datetime import datetime
 from pathlib import Path
+from metrics_tracker import (track_page_view, track_prediction, track_pipeline_transition,
+                             track_submission, track_decision, track_registration, get_summary)
 
 st.set_page_config(page_title="AgriSense AI", page_icon="🌱", layout="wide", initial_sidebar_state="collapsed")
 
@@ -224,7 +226,9 @@ def predict(fin, loans, farm):
     repay=float(m["repayment_regressor"].predict(feats)[0])
     cap=float(m["debt_capacity_regressor"].predict(feats)[0])
     lvl="Low" if risk<0.25 else "Medium" if risk<0.50 else "High"
-    return {"risk":round(risk,4),"repay":round(repay,4),"cap":round(cap,2),"level":lvl}
+    result = {"risk":round(risk,4),"repay":round(repay,4),"cap":round(cap,2),"level":lvl}
+    track_prediction(farm.get("name","unknown"), risk, repay, lvl)
+    return result
 
 # ═══════════════ CSS ═══════════════
 st.markdown("""<style>
@@ -828,6 +832,7 @@ def decision_content():
             cf = current_farmer()
             new_status = "Approved" if d=="Approve" else ("Approved w/ Cond" if "Conditions" in d else "Rejected")
             set_pipeline_status(cf["name"], new_status)
+            track_decision(cf["name"], d)
             st.success(f"Decision recorded: **{d}**")
             st.rerun()
     else:
@@ -953,6 +958,22 @@ def landing():
             st.rerun()
     with c2:
         st.caption("2,500 farmers · 11 regions · v1.2.0 · Advisory only")
+
+    # 📊 Metrics Dashboard
+    with st.expander("📊 Metrics Dashboard", expanded=False):
+        summary = get_summary()
+        if summary.get("total", 0) == 0:
+            st.caption("No events recorded yet. Metrics will appear as the app is used.")
+        else:
+            c1, c2, c3, c4 = st.columns(4)
+            with c1: st.metric("Total Events", summary["total"])
+            with c2: st.metric("Predictions", summary.get("events", {}).get("prediction", 0))
+            with c3: st.metric("Submissions", summary.get("events", {}).get("submitted", 0))
+            with c4: st.metric("Decisions", summary.get("events", {}).get("decision", 0))
+            if summary.get("recent"):
+                st.markdown("**Recent Activity**")
+                for r in summary["recent"][:10]:
+                    st.caption(f"{r['time']} · {r['event']} · {r['actor']}")
 
 # ═══════════════ TOP BAR ═══════════════
 def top_bar(role, label):
@@ -1123,9 +1144,9 @@ def farmer_wizard():
         with c2:
             if st.button("📤 Submit to Credit Analyst",type="primary",use_container_width=True):
                 st.session_state.farmer_submitted = True
-                # Update pipeline status so analyst sees it
                 cf = current_farmer()
                 set_pipeline_status(cf["name"], "Submitted")
+                track_submission(cf["name"], cf.get("crop"), cf.get("ha"), cf.get("insurance"))
                 st.success("Submitted!"); st.balloons(); time.sleep(1); st.rerun()
 
 def farmer_dashboard():
