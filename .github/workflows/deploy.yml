@@ -30,7 +30,8 @@ jobs:
       - name: Model bundle check
         run: |
           if [ -f agrisense_model_bundle.pkl ]; then
-            echo "Model bundle present ($(du -h agrisense_model_bundle.pkl | cut -f1))"
+            SIZE=$(du -h agrisense_model_bundle.pkl | cut -f1)
+            echo "Model bundle present ($SIZE)"
           else
             echo "WARNING: Model bundle missing!"
           fi
