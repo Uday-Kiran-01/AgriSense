@@ -78,7 +78,18 @@ docker compose up
 
 ## Deploying
 
-Every `git push` to `main` triggers a GitHub Actions workflow that auto-deploys to HF Spaces. The pipeline uploads `app.py`, `requirements.txt`, `.streamlit/config.toml`, and `agrisense_model_bundle.pkl`. Deploy time: ~30 seconds.
+Every `git push` to `main` triggers a two-stage CI/CD pipeline:
+
+1. **CI (Validate):** Syntax check, import check, file presence check
+2. **CD (Deploy):** Uploads `app.py`, `requirements.txt`, `.streamlit/config.toml`, and `agrisense_model_bundle.pkl` to HF Spaces
+
+Deploy time: ~30 seconds. Infrastructure managed via Terraform (`infrastructure/`). See `Makefile` for local commands.
+
+---
+
+## Metrics
+
+Built-in analytics dashboard on the landing page tracks: predictions, farmer submissions, bank decisions, and page views. Data stored in `metrics.db` (SQLite) and survives restarts.
 
 ---
 
@@ -88,11 +99,13 @@ Every `git push` to `main` triggers a GitHub Actions workflow that auto-deploys 
 |-------|-----------|
 | Frontend | Streamlit 1.36 |
 | ML | scikit-learn Random Forest × 3 (joblib) |
-| Storage | SQLite for custom farmer persistence |
-| State | st.session_state overrides (survive Streamlit reruns) |
+| Storage | SQLite for farmers + metrics |
+| State | session_state overrides (survive reruns) |
 | CI/CD | GitHub Actions → HF Spaces |
+| IaC | Terraform (infrastructure as code) |
 | Container | Docker + Docker Compose |
-| Backend (prod) | FastAPI + SHAP + Gemini (available in repo) |
+| Metrics | Built-in SQLite analytics dashboard |
+| Backend (prod) | FastAPI + SHAP + Gemini (in repo) |
 
 ---
 
