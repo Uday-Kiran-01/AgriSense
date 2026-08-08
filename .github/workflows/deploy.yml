@@ -8,39 +8,31 @@ on:
   workflow_dispatch:
 
 jobs:
-  # Stage 1: Continuous Integration
   validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-
       - name: Install dependencies
         run: pip install -r requirements.txt
-
       - name: Syntax check
         run: python -c "import ast; ast.parse(open('app.py',encoding='utf-8').read()); print('OK')"
-
       - name: Import check
         run: python -c "import joblib, numpy; print('OK')"
-
       - name: File checks
         run: |
-          test -f app.py && echo "app.py: OK"
-          test -f agrisense_model_bundle.pkl && echo "model: OK"
-          test -f .streamlit/config.toml && echo "config: OK"
+          test -f app.py && echo "app.py: OK" || echo "app.py: MISSING"
+          test -f agrisense_model_bundle.pkl && echo "model: OK" || echo "model: MISSING"
+          test -f .streamlit/config.toml && echo "config: OK" || echo "config: MISSING"
 
-  # Stage 2: Continuous Deployment (main branch only, after CI passes)
   deploy:
     needs: validate
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Deploy to HuggingFace Spaces
         env:
           HF_TOKEN: ${{ secrets.AgriSense }}
@@ -52,15 +44,4 @@ jobs:
           for f in ['app.py','requirements.txt','.streamlit/config.toml','agrisense_model_bundle.pkl']:
               api.upload_file(path_or_fileobj=f, path_in_repo=f, repo_id='SuperNitro/Agri-Sense', repo_type='space')
           print('Deployed')
-          "
-        env:
-          HF_TOKEN: ${{ secrets.AgriSense }}
-        run: |
-          pip install huggingface_hub
-          python -c "
-          from huggingface_hub import HfApi
-          api = HfApi()
-          for f in ['app.py', 'requirements.txt', '.streamlit/config.toml', 'agrisense_model_bundle.pkl']:
-              api.upload_file(path_or_fileobj=f, path_in_repo=f, repo_id='SuperNitro/Agri-Sense', repo_type='space')
-          print('Deployed all 4 files!')
           "
