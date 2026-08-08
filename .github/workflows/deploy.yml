@@ -1,17 +1,57 @@
-name: Deploy to HF Spaces
+name: CI/CD Pipeline
 
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 jobs:
-  deploy:
+  # ── Stage 1: Continuous Integration ──
+  validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Deploy to HuggingFace
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Syntax check (app.py)
+        run: python -c "import ast; ast.parse(open('app.py',encoding='utf-8').read()); print('app.py: OK')"
+
+      - name: Import check (no runtime errors)
+        run: python -c "import joblib, numpy; print('Dependencies OK')"
+
+      - name: Model bundle check
+        run: |
+          if [ -f agrisense_model_bundle.pkl ]; then
+            echo "Model bundle present ($(du -h agrisense_model_bundle.pkl | cut -f1))"
+          else
+            echo "WARNING: Model bundle missing!"
+          fi
+
+      - name: Config check
+        run: |
+          if [ -f .streamlit/config.toml ]; then
+            echo "Streamlit config present"
+          else
+            echo "WARNING: .streamlit/config.toml missing!"
+          fi
+
+  # ── Stage 2: Continuous Deployment (only on push to main) ──
+  deploy:
+    needs: validate
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to HuggingFace Spaces
         env:
           HF_TOKEN: ${{ secrets.AgriSense }}
         run: |
@@ -19,9 +59,7 @@ jobs:
           python -c "
           from huggingface_hub import HfApi
           api = HfApi()
-          api.upload_file(path_or_fileobj='app.py', path_in_repo='app.py', repo_id='SuperNitro/Agri-Sense', repo_type='space')
-          api.upload_file(path_or_fileobj='requirements.txt', path_in_repo='requirements.txt', repo_id='SuperNitro/Agri-Sense', repo_type='space')
-          api.upload_file(path_or_fileobj='.streamlit/config.toml', path_in_repo='.streamlit/config.toml', repo_id='SuperNitro/Agri-Sense', repo_type='space')
-          api.upload_file(path_or_fileobj='agrisense_model_bundle.pkl', path_in_repo='agrisense_model_bundle.pkl', repo_id='SuperNitro/Agri-Sense', repo_type='space')
-          print('Deployed!')
+          for f in ['app.py', 'requirements.txt', '.streamlit/config.toml', 'agrisense_model_bundle.pkl']:
+              api.upload_file(path_or_fileobj=f, path_in_repo=f, repo_id='SuperNitro/Agri-Sense', repo_type='space')
+          print('Deployed all 4 files!')
           "

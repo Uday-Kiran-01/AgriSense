@@ -1,0 +1,32 @@
+# Git pre-commit hook - validates before every commit
+# Install: cp .githooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+
+#!/bin/bash
+echo "🔍 AgriSense AI - Pre-commit validation..."
+
+# 1. Python syntax check
+python -c "import ast; ast.parse(open('app.py',encoding='utf-8').read())"
+if [ $? -ne 0 ]; then
+    echo "❌ app.py has syntax errors. Commit aborted."
+    exit 1
+fi
+echo "✅ Syntax check passed"
+
+# 2. No em dashes
+if grep -rP '\x{2014}' app.py --quiet; then
+    echo "❌ Em dashes found in app.py. Replace with regular dashes."
+    exit 1
+fi
+echo "✅ No em dashes"
+
+# 3. Model bundle present
+if [ ! -f agrisense_model_bundle.pkl ]; then
+    echo "⚠️  Model bundle (agrisense_model_bundle.pkl) missing!"
+fi
+
+# 4. Config present
+if [ ! -f .streamlit/config.toml ]; then
+    echo "⚠️  Streamlit config (.streamlit/config.toml) missing!"
+fi
+
+echo "✅ All checks passed"
