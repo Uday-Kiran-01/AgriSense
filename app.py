@@ -9,8 +9,20 @@ import numpy as np
 import joblib, time, sqlite3, json
 from datetime import datetime
 from pathlib import Path
-from metrics_tracker import (track_page_view, track_prediction, track_pipeline_transition,
-                             track_submission, track_decision, track_registration, get_summary)
+try:
+    from metrics_tracker import (track_page_view, track_prediction, track_pipeline_transition,
+                                 track_submission, track_decision, track_registration, get_summary)
+    METRICS_OK = True
+except ImportError:
+    METRICS_OK = False
+    # Define no-op fallbacks so the app doesn't crash
+    def track_page_view(*a, **k): pass
+    def track_prediction(*a, **k): pass
+    def track_pipeline_transition(*a, **k): pass
+    def track_submission(*a, **k): pass
+    def track_decision(*a, **k): pass
+    def track_registration(*a, **k): pass
+    def get_summary(): return {"total": 0}
 
 st.set_page_config(page_title="AgriSense AI", page_icon="🌱", layout="wide", initial_sidebar_state="collapsed")
 
