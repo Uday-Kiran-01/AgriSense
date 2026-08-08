@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  # ── Stage 1: Continuous Integration ──
+  # -- Stage 1: Continuous Integration --
   validate:
     runs-on: ubuntu-latest
     steps:
@@ -43,7 +43,7 @@ jobs:
             echo "WARNING: .streamlit/config.toml missing!"
           fi
 
-  # ── Stage 2: Continuous Deployment (only on push to main) ──
+  # -- Stage 2: Continuous Deployment (only on push to main) --
   deploy:
     needs: validate
     if: github.ref == 'refs/heads/main'
